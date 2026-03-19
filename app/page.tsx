@@ -114,7 +114,7 @@ export default function ResumenDashboard() {
           </div>
 
           {/* Card: Total Recaudado (Verde) */}
-          <div className="bg-green-50 p-6 rounded-xl shadow-md border border-green-200 border-l-4 border-green-500">
+          <div className="bg-green-50 p-6 rounded-xl shadow-md borderborder border border-green-200 border-l-4 border-l-green-500">
             <div className="flex justify-between items-start mb-4">
               <p className="font-bold text-green-800">Recaudado (Pagado)</p>
               <DollarSign className="text-green-500" size={24} />
@@ -124,7 +124,7 @@ export default function ResumenDashboard() {
           </div>
 
           {/* Card: Total Pendiente (Rojo) */}
-          <div className="bg-red-50 p-6 rounded-xl shadow-md border border-red-200 border-l-4 border-red-500">
+          <div className="bg-red-50 p-6 rounded-xl shadow-md borderborder border-red-200 border-l-4 border-l-red-500">
             <div className="flex justify-between items-start mb-4">
               <p className="font-bold text-red-800">Cartera Pendiente (Mora)</p>
               <Clock className="text-red-500" size={24} />
