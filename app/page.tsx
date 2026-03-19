@@ -137,7 +137,7 @@ export default function ResumenDashboard() {
       
       {/* Mensaje de bienvenida profesional */}
       <div className="bg-white p-6 rounded-xl shadow border border-gray-100 text-center">
-          <h3 className="text-xl font-bold text-gray-800">Bienvenido al Panel de Control de Acuasoft Clone</h3>
+          <h3 className="text-xl font-bold text-gray-800">Bienvenido al Panel de Control de Fluvio-Cloud</h3>
           <p className="text-gray-600 mt-2 max-w-2xl mx-auto">Utiliza el menú lateral para gestionar suscriptores, generar la facturación del mes, registrar pagos y visualizar reportes de cartera. Toda la información mostrada aquí es en tiempo real.</p>
       </div>
 

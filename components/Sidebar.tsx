@@ -64,7 +64,7 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-blue-900 text-white p-6 min-h-screen flex flex-col">
-      <h1 className="text-2xl font-bold mb-8">Acuasoft Clone</h1>
+      <h1 className="text-2xl font-bold mb-8">Fluvio-Cloud</h1>
       
       <nav className="space-y-2 flex-1">
         <Link href="/" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${pathname === '/' ? 'bg-blue-800 text-white' : 'text-blue-200 hover:bg-blue-800 hover:text-white'}`}>
