@@ -36,7 +36,7 @@ export default function Login() {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white max-w-md w-full p-8 rounded-xl shadow-2xl">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-black text-blue-900 mb-2">Acuasoft Clone</h1>
+          <h1 className="text-3xl font-black text-blue-900 mb-2">Fluvio-Cloud</h1>
           <p className="text-gray-500 font-medium">Ingresa a tu panel de administración</p>
         </div>
 
