@@ -7,6 +7,7 @@ import { Settings, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ConfiguracionGlobal() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [config, setConfig] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -28,7 +29,7 @@ export default function ConfiguracionGlobal() {
       // ----------------------------------------
 
       // Si pasa la seguridad (es superadmin), cargamos los datos normalmente:
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('acueductos')
         .select('*')
         .limit(1)
@@ -146,6 +147,7 @@ export default function ConfiguracionGlobal() {
               <input type="text" value={config.logo_url} onChange={(e) => setConfig({...config, logo_url: e.target.value})} placeholder="https://ejemplo.com/logo.png" className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm" />
               {config.logo_url && (
                 <div className="mt-2 p-2 bg-gray-50 border rounded inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={config.logo_url} alt="Vista previa del logo" className="h-12 object-contain" onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/150x50?text=Error+en+URL')} />
                 </div>
               )}

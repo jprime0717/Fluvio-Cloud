@@ -17,13 +17,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${inter.className} flex bg-gray-50 min-h-screen`}>
-        {/* Aquí ponemos nuestro Menú Lateral para que esté en todas partes */}
+      {/* El cambio clave: flex-col en móvil, flex-row en PC */}
+      <body className={`${inter.className} bg-gray-50 flex flex-col md:flex-row min-h-screen`}>
+        
+        {/* Nuestro Menú Lateral Responsive */}
         <Sidebar />
-        {/* Aquí es donde cambiarán las páginas (Dashboard, Suscriptores, etc.) */}
-        <main className="flex-1 overflow-y-auto">
+        
+        {/* El contenido de tu app toma el resto del espacio */}
+        <main className="flex-1 w-full h-full md:h-screen md:overflow-y-auto">
           {children}
         </main>
+
       </body>
     </html>
   );
