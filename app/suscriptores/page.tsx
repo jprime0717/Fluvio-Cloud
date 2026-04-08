@@ -8,6 +8,7 @@ interface Suscriptor {
   nombre_completo: string;
   documento: string;
   direccion: string;
+  tipo_suscriptor: string; // <-- Nuevo campo para TypeScript
   estado: string;
 }
 
@@ -16,6 +17,7 @@ export default function Suscriptores() {
   const [nombre, setNombre] = useState('');
   const [documento, setDocumento] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [tipo, setTipo] = useState('Residencial'); // <-- Estado para el tipo por defecto
   
   const [guardando, setGuardando] = useState(false);
   const [cargandoLista, setCargandoLista] = useState(true);
@@ -46,11 +48,12 @@ export default function Suscriptores() {
       .insert([{ 
         nombre_completo: nombre.trim(), 
         documento: documento.trim(), 
-        direccion: direccion.trim() 
+        direccion: direccion.trim(),
+        tipo_suscriptor: tipo // <-- Guardamos el tipo en Supabase
       }]);
 
     if (!error) {
-      setNombre(''); setDocumento(''); setDireccion('');
+      setNombre(''); setDocumento(''); setDireccion(''); setTipo('Residencial');
       await cargarSuscriptores(); 
     } else {
       alert('Error al guardar: ' + error.message);
@@ -71,23 +74,42 @@ export default function Suscriptores() {
               <label className="block text-sm font-semibold text-gray-900 mb-1">Nombre Completo</label>
               <input 
                 type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-gray-900 font-medium bg-white" 
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black dark:text-black font-medium" 
+                style={{ color: '#000000' }}
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1">Documento / Cédula</label>
               <input 
                 type="text" required value={documento} onChange={(e) => setDocumento(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-gray-900 font-medium bg-white" 
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black dark:text-black font-medium" 
+                style={{ color: '#000000' }}
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1">Dirección / Predio</label>
               <input 
                 type="text" required value={direccion} onChange={(e) => setDireccion(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-gray-900 font-medium bg-white" 
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black dark:text-black font-medium" 
+                style={{ color: '#000000' }}
               />
             </div>
+            
+            {/* NUEVO CAMPO: Selector de Tipo */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1">Tipo de Suscriptor</label>
+              <select 
+                value={tipo} 
+                onChange={(e) => setTipo(e.target.value)}
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black dark:text-black font-medium"
+                style={{ color: '#000000' }}
+              >
+                <option value="Residencial">Residencial</option>
+                <option value="Comercial">Comercial</option>
+                <option value="Industrial">Industrial</option>
+              </select>
+            </div>
+
             <button 
               type="submit" disabled={guardando}
               className="w-full bg-blue-600 text-white font-bold p-3 rounded hover:bg-blue-700 disabled:bg-blue-300 transition-colors mt-2"
@@ -107,19 +129,20 @@ export default function Suscriptores() {
                   <th className="p-3 text-sm font-bold text-gray-900">Nombre</th>
                   <th className="p-3 text-sm font-bold text-gray-900">Documento</th>
                   <th className="p-3 text-sm font-bold text-gray-900">Dirección</th>
+                  <th className="p-3 text-sm font-bold text-gray-900">Tipo</th>
                   <th className="p-3 text-sm font-bold text-gray-900">Estado</th>
                 </tr>
               </thead>
               <tbody className="text-gray-900">
                 {cargandoLista ? (
                   <tr>
-                    <td colSpan={4} className="p-4 text-center font-medium text-gray-600">
+                    <td colSpan={5} className="p-4 text-center font-medium text-gray-600">
                       Cargando suscriptores...
                     </td>
                   </tr>
                 ) : suscriptores.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="p-4 text-center font-medium text-gray-600">
+                    <td colSpan={5} className="p-4 text-center font-medium text-gray-600">
                       Aún no hay suscriptores registrados.
                     </td>
                   </tr>
@@ -129,6 +152,15 @@ export default function Suscriptores() {
                       <td className="p-3 font-semibold">{sub.nombre_completo}</td>
                       <td className="p-3 font-medium">{sub.documento}</td>
                       <td className="p-3 font-medium">{sub.direccion}</td>
+                      <td className="p-3 font-medium">
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                          sub.tipo_suscriptor === 'Comercial' ? 'bg-blue-100 text-blue-800' :
+                          sub.tipo_suscriptor === 'Industrial' ? 'bg-purple-100 text-purple-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {sub.tipo_suscriptor || 'Residencial'}
+                        </span>
+                      </td>
                       <td className="p-3">
                         <span className="bg-green-100 text-green-900 font-bold px-2 py-1 rounded text-xs">
                           {sub.estado || 'Activo'}

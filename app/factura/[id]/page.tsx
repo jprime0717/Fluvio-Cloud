@@ -3,44 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-// ¡Añadimos las tijeras (Scissors) a los íconos!
 import { Printer, ArrowLeft, MessageCircle, Scissors } from 'lucide-react';
 import Link from 'next/link';
-
-interface Suscriptor {
-  id: string;
-  nombre_completo: string;
-  documento: string;
-  direccion: string;
-}
-
-interface Factura {
-  id: string;
-  monto: number;
-  estado: 'Pagado' | 'Pendiente';
-  fecha_emision: string;
-  mes: number;
-  anio: number;
-  suscriptor_id: string;
-  suscriptor: Suscriptor;
-}
-
-interface Config {
-  logo_url?: string;
-  nombre: string;
-  nit: string;
-  direccion: string;
-  telefono: string;
-  email: string;
-  mensaje_factura: string;
-}
 
 export default function FacturaPDF() {
   const params = useParams();
   const facturaId = params.id;
   
-  const [datos, setDatos] = useState<Factura | null>(null);
-  const [config, setConfig] = useState<Config | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [datos, setDatos] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [config, setConfig] = useState<any>(null);
   const [deudaTotal, setDeudaTotal] = useState<number>(0);
   const [mesesMora, setMesesMora] = useState<number>(0);
   const [cargando, setCargando] = useState(true);
@@ -51,10 +24,10 @@ export default function FacturaPDF() {
       const { data: configData } = await supabase.from('acueductos').select('*').limit(1).single();
       if (configData) setConfig(configData);
 
-      // 2. Cargamos la factura actual y el suscriptor
+      // 2. Cargamos la factura actual y el suscriptor (¡AÑADIMOS tipo_suscriptor AQUÍ!)
       const { data: facturaData } = await supabase
         .from('facturas')
-        .select(`*, suscriptor:suscriptor_id (id, nombre_completo, documento, direccion)`)
+        .select(`*, suscriptor:suscriptor_id (id, nombre_completo, documento, direccion, tipo_suscriptor)`)
         .eq('id', facturaId)
         .single();
 
@@ -85,28 +58,25 @@ export default function FacturaPDF() {
   };
 
   const enviarWhatsApp = () => {
-    // Generamos el enlace a esta misma página (cuando esté en Vercel, será un link público)
     const urlFactura = window.location.href;
     const montoMostrar = datos.estado === 'Pendiente' ? deudaTotal : datos.monto;
     
     const mensaje = `Hola ${datos.suscriptor.nombre_completo}, te compartimos tu factura del ${config?.nombre || 'Acueducto'}. Total a pagar: $${montoMostrar.toLocaleString('es-CO')}. Puedes verla y descargarla aquí: ${urlFactura}`;
     
-    // Abre WhatsApp Web (o la app en celulares) para elegir el contacto y enviar el mensaje
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
   };
 
-  if (cargando) return <div className="p-8 text-center text-gray-500">Generando documento...</div>;
-  if (!datos || !config) return <div className="p-8 text-center text-red-500">Error al cargar la factura o la configuración</div>;
+  if (cargando) return <div className="p-8 text-center text-gray-500 font-bold">Generando documento...</div>;
+  if (!datos || !config) return <div className="p-8 text-center text-red-500 font-bold">Error al cargar la factura o la configuración</div>;
 
-  // Si la factura ya está pagada, mostramos el valor de esa factura. Si está pendiente, mostramos toda la deuda.
   const totalMostrar = datos.estado === 'Pagado' ? Number(datos.monto) : deudaTotal;
 
   return (
     <div className="min-h-screen bg-gray-200 p-8 flex flex-col items-center">
       
-      {/* Botonera Superior (print:hidden los oculta al imprimir) */}
+      {/* Botonera Superior */}
       <div className="w-full max-w-2xl flex flex-wrap justify-between gap-4 mb-6 print:hidden">
-        <Link href="/facturas" className="flex items-center gap-2 text-gray-700 bg-white px-4 py-2 rounded shadow hover:bg-gray-50">
+        <Link href="/facturas" className="flex items-center gap-2 text-gray-700 bg-white px-4 py-2 rounded shadow hover:bg-gray-50 font-bold">
           <ArrowLeft size={20} /> Volver
         </Link>
         <div className="flex gap-3">
@@ -119,7 +89,7 @@ export default function FacturaPDF() {
         </div>
       </div>
 
-      {/* Papel de la Factura (A4 simulado) */}
+      {/* Papel de la Factura */}
       <div className="bg-white w-full max-w-2xl p-10 rounded shadow-xl print:shadow-none print:p-0 relative overflow-hidden">
         
         {/* Marca de agua si está pagado */}
@@ -137,55 +107,71 @@ export default function FacturaPDF() {
             )}
             <div>
               <h1 className="text-2xl font-extrabold text-gray-800 uppercase tracking-wide">{config.nombre}</h1>
-              <p className="text-gray-600 font-medium">NIT: {config.nit}</p>
-              <p className="text-gray-500 text-sm">{config.direccion}</p>
-              <p className="text-gray-500 text-sm">Tel: {config.telefono} | {config.email}</p>
+              <p className="text-gray-600 font-bold">NIT: {config.nit}</p>
+              <p className="text-gray-500 text-sm font-medium">{config.direccion}</p>
+              <p className="text-gray-500 text-sm font-medium">Tel: {config.telefono} | {config.email}</p>
             </div>
           </div>
           <div className="text-right bg-blue-50 p-3 rounded-lg border border-blue-100">
             <h2 className="text-xl font-bold text-blue-900 uppercase">Factura de Venta</h2>
-            <p className="text-gray-800 font-mono mt-1 text-lg">N° {datos.id.substring(0, 6).toUpperCase()}</p>
-            <p className="text-gray-600 text-sm mt-1 font-semibold">Emisión: {new Date(datos.fecha_emision).toLocaleDateString()}</p>
-            <p className="text-gray-600 text-sm font-semibold">Período: Mes {datos.mes} / {datos.anio}</p>
+            <p className="text-gray-800 font-mono mt-1 text-lg font-bold">N° {datos.id.substring(0, 6).toUpperCase()}</p>
+            <p className="text-gray-600 text-sm mt-1 font-bold">Emisión: {new Date(datos.fecha_emision).toLocaleDateString()}</p>
+            <p className="text-gray-600 text-sm font-bold">Período: Mes {datos.mes} / {datos.anio}</p>
           </div>
         </div>
 
         {/* Datos del Cliente */}
         <div className="mb-8 grid grid-cols-2 gap-4">
           <div className="bg-gray-50 p-4 rounded border border-gray-200">
-            <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">Facturar a:</h3>
-            <p className="text-lg font-bold text-gray-800">{datos.suscriptor.nombre_completo}</p>
-            <p className="text-gray-600">CC/NIT: {datos.suscriptor.documento}</p>
-            <p className="text-gray-600">Predio: {datos.suscriptor.direccion}</p>
+            <h3 className="text-xs font-black text-gray-500 uppercase mb-2">Facturar a:</h3>
+            <p className="text-lg font-extrabold text-gray-800">{datos.suscriptor.nombre_completo}</p>
+            <p className="text-gray-700 font-medium">CC/NIT: {datos.suscriptor.documento}</p>
+            <p className="text-gray-700 font-medium">Predio: {datos.suscriptor.direccion}</p>
+            
+            {/* NUEVO: Etiqueta Visual del Tipo de Suscriptor */}
+            <div className="mt-3">
+              <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 border border-blue-200 text-xs font-black rounded uppercase tracking-wider">
+                TIPO: {datos.suscriptor.tipo_suscriptor || 'Residencial'}
+              </span>
+            </div>
           </div>
+          
           {datos.estado === 'Pendiente' && mesesMora > 1 && (
             <div className="bg-red-50 p-4 rounded border border-red-200 flex flex-col justify-center items-center text-center">
-              <h3 className="text-red-800 font-bold uppercase mb-1">¡Aviso de Mora!</h3>
-              <p className="text-red-600">Usted presenta <strong>{mesesMora} meses</strong> pendientes de pago.</p>
-              <p className="text-xs text-red-500 mt-1">El valor total incluye toda su deuda acumulada.</p>
+              <h3 className="text-red-800 font-black uppercase mb-1 text-lg">¡Aviso de Mora!</h3>
+              <p className="text-red-700 font-medium">Usted presenta <strong className="font-black">{mesesMora} meses</strong> pendientes de pago.</p>
+              <p className="text-xs text-red-600 mt-2 font-bold">El valor total incluye toda su deuda acumulada.</p>
             </div>
           )}
         </div>
 
         {/* Tabla de Conceptos */}
-        <table className="w-full text-left mb-8 border-collapse">
+        <table className="w-full text-left mb-8 border-collapse border border-gray-200">
           <thead>
             <tr className="bg-blue-900 text-white">
-              <th className="p-3 rounded-tl-lg">Descripción</th>
-              <th className="p-3 text-center">Período</th>
-              <th className="p-3 text-right rounded-tr-lg">Valor</th>
+              <th className="p-3 rounded-tl border-r border-blue-800 font-bold">Descripción</th>
+              <th className="p-3 text-center border-r border-blue-800 font-bold">Período</th>
+              <th className="p-3 text-right rounded-tr font-bold">Valor</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b">
-              <td className="p-4 text-gray-800 font-medium">Servicio de Acueducto (Tarifa Fija)</td>
-              <td className="p-4 text-center text-gray-600">{datos.mes} / {datos.anio}</td>
-              <td className="p-4 text-right text-gray-800">${Number(datos.monto).toLocaleString('es-CO')}</td>
+            <tr className="border-b border-gray-200">
+              <td className="p-4 text-gray-800 font-bold">
+                Servicio de Acueducto
+                {/* NUEVO: Texto explicativo automático según el tipo */}
+                <span className="block text-xs text-gray-500 font-medium mt-1">
+                  {datos.suscriptor.tipo_suscriptor === 'Comercial' ? '(Incluye recargo por uso comercial)' : 
+                   datos.suscriptor.tipo_suscriptor === 'Industrial' ? '(Incluye recargo por uso industrial)' : 
+                   '(Tarifa base residencial)'}
+                </span>
+              </td>
+              <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
+              <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.monto).toLocaleString('es-CO')}</td>
             </tr>
             {datos.estado === 'Pendiente' && mesesMora > 1 && (
-              <tr className="border-b bg-gray-50">
-                <td colSpan={2} className="p-4 text-gray-800 italic">Saldos anteriores pendientes ({mesesMora - 1} meses)</td>
-                <td className="p-4 text-right text-gray-800">${(deudaTotal - Number(datos.monto)).toLocaleString('es-CO')}</td>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <td colSpan={2} className="p-4 text-gray-800 font-bold italic">Saldos anteriores pendientes ({mesesMora - 1} meses)</td>
+                <td className="p-4 text-right text-gray-900 font-bold">${(deudaTotal - Number(datos.monto)).toLocaleString('es-CO')}</td>
               </tr>
             )}
           </tbody>
@@ -201,7 +187,7 @@ export default function FacturaPDF() {
               </span>
             </div>
             <div className="mt-3 text-right">
-              <span className={`px-4 py-2 text-sm font-black uppercase tracking-wider rounded ${datos.estado === 'Pagado' ? 'bg-green-200 text-green-900' : 'bg-red-200 text-red-900'}`}>
+              <span className={`px-4 py-2 text-sm font-black uppercase tracking-wider rounded border ${datos.estado === 'Pagado' ? 'bg-green-100 text-green-900 border-green-300' : 'bg-red-100 text-red-900 border-red-300'}`}>
                 ESTADO: {datos.estado}
               </span>
             </div>
@@ -210,62 +196,60 @@ export default function FacturaPDF() {
 
         {/* Pie de página dinámico */}
         <div className="border-t-2 border-gray-200 pt-6 text-center text-gray-600 text-sm">
-          <p className="font-medium italic">"{config.mensaje_factura}"</p>
-          <p className="mt-2 text-xs text-gray-400">Generado por Acuasoft Clone - Plataforma SaaS</p>
+          <p className="font-bold italic">"{config.mensaje_factura}"</p>
+          <p className="mt-2 text-xs text-gray-400 font-medium">Generado por Acuasoft Clone - Plataforma SaaS</p>
         </div>
 
-        {/* ========================================= */}
         {/* --- INICIO LÍNEA DE CORTE --- */}
-        {/* ========================================= */}
         <div className="relative flex items-center py-8 print:py-6 mt-4">
           <div className="flex-grow border-t-2 border-dashed border-gray-400"></div>
           <span className="flex-shrink-0 mx-4 text-gray-500 flex items-center gap-2">
             <Scissors size={20} className="transform -rotate-90 text-gray-400" />
-            <span className="text-xs uppercase tracking-widest text-gray-400 print:text-[10px]">
+            <span className="text-xs uppercase font-bold tracking-widest text-gray-400 print:text-[10px]">
               Línea de corte
             </span>
           </span>
           <div className="flex-grow border-t-2 border-dashed border-gray-400"></div>
         </div>
 
-        {/* ========================================= */}
         {/* --- INICIO DESPRENDIBLE DE PAGO --- */}
-        {/* ========================================= */}
         <div className="border-2 border-gray-800 rounded-xl p-6 bg-white print:border print:border-gray-500 print:shadow-none shadow-sm mb-4">
           <div className="flex justify-between items-center border-b border-gray-300 pb-4 mb-4">
             <div>
-              <h3 className="text-xl font-bold text-gray-800 uppercase tracking-wide">
+              <h3 className="text-xl font-extrabold text-gray-800 uppercase tracking-wide">
                 Desprendible de Pago
               </h3>
-              <p className="text-xs font-mono text-gray-500 mt-1">Copia para el Acueducto</p>
+              <p className="text-xs font-bold text-gray-500 mt-1 uppercase">Copia para el Acueducto</p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-500">Período Facturado</p>
-              <p className="font-bold text-gray-800">Mes {datos.mes} / {datos.anio}</p>
+              <p className="text-sm text-gray-500 font-bold uppercase">Período</p>
+              <p className="font-extrabold text-gray-900">Mes {datos.mes} / {datos.anio}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-gray-500 text-xs uppercase">Suscriptor:</p>
-              <p className="font-bold text-gray-800 text-lg">{datos.suscriptor.nombre_completo}</p>
+              <p className="text-gray-500 text-xs font-bold uppercase">Suscriptor:</p>
+              <p className="font-extrabold text-gray-900 text-lg">{datos.suscriptor.nombre_completo}</p>
+              {/* NUEVO: Tipo en el desprendible */}
+              <p className="text-xs font-bold text-blue-700 mt-1 uppercase">{datos.suscriptor.tipo_suscriptor || 'Residencial'}</p>
             </div>
             
             <div className="text-right">
-              <p className="text-gray-500 text-xs uppercase">N° Factura:</p>
-              <p className="font-mono text-gray-800">#{datos.id.substring(0, 6).toUpperCase()}</p>
+              <p className="text-gray-500 text-xs font-bold uppercase">N° Factura:</p>
+              <p className="font-mono font-bold text-gray-900">#{datos.id.substring(0, 6).toUpperCase()}</p>
             </div>
 
             <div>
-              <p className="text-gray-500 text-xs uppercase">Estado:</p>
-              <p className={`font-bold ${datos.estado === 'Pagado' ? 'text-green-600' : 'text-red-600'}`}>
+              <p className="text-gray-500 text-xs font-bold uppercase">Estado:</p>
+              <p className={`font-black uppercase ${datos.estado === 'Pagado' ? 'text-green-600' : 'text-red-600'}`}>
                 {datos.estado}
               </p>
             </div>
             
             <div className="text-right">
-              <p className="text-gray-500 text-xs uppercase">Total a Pagar:</p>
-              <p className={`font-bold text-2xl print:text-black ${datos.estado === 'Pagado' ? 'text-green-700' : 'text-blue-700'}`}>
+              <p className="text-gray-500 text-xs font-bold uppercase">Total a Pagar:</p>
+              <p className={`font-black text-2xl print:text-black ${datos.estado === 'Pagado' ? 'text-green-700' : 'text-blue-700'}`}>
                 ${totalMostrar.toLocaleString('es-CO')}
               </p>
             </div>
