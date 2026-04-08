@@ -17,7 +17,6 @@ export default function Login() {
     setError('');
     setCargando(true);
 
-    // Conectamos con la autenticación real de Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
@@ -27,7 +26,6 @@ export default function Login() {
       setError('Correo o contraseña incorrectos.');
       setCargando(false);
     } else {
-      // Si el login es exitoso, lo enviamos al panel principal
       router.push('/');
     }
   };
@@ -37,7 +35,8 @@ export default function Login() {
       <div className="bg-white max-w-md w-full p-8 rounded-xl shadow-2xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-black text-blue-900 mb-2">Fluvio-Cloud</h1>
-          <p className="text-gray-800 font-medium">Ingresa a tu panel de administración</p>
+          {/* TEXTO MÁS OSCURO AQUÍ */}
+          <p className="text-gray-900 font-medium">Ingresa a tu panel de administración</p>
         </div>
 
         {error && (
@@ -49,30 +48,32 @@ export default function Login() {
 
         <form onSubmit={iniciarSesion} className="space-y-6">
           <div>
-            <label className="text-gray-800 text-sm font-medium">Correo electrónico</label>
+            {/* LABELS MÁS GRUESOS Y OSCUROS */}
+            <label className="text-gray-900 text-sm font-semibold mb-1 block">Correo electrónico</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 text-gray-700" size={20} />
+              <Mail className="absolute left-3 top-3.5 text-gray-700" size={20} />
               <input 
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                /* INPUTS CON TEXTO OSCURO Y PLACEHOLDER VISIBLE */
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-gray-900 bg-white placeholder-gray-500 font-medium"
                 placeholder="admin@acueducto.com"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-gray-800 text-sm font-medium">Contraseña</label>
+            <label className="text-gray-900 text-sm font-semibold mb-1 block">Contraseña</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 text-gray-700" size={20} />
+              <Lock className="absolute left-3 top-3.5 text-gray-700" size={20} />
               <input 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-gray-900 bg-white placeholder-gray-500 font-medium"
                 placeholder="••••••••"
               />
             </div>
