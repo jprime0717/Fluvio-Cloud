@@ -3,29 +3,44 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+// 1. Definimos la interfaz para el tipado de TypeScript
+interface Suscriptor {
+  id: number; // o string, dependiendo de tu UUID en Supabase
+  nombre_completo: string;
+  documento: string;
+  direccion: string;
+  estado: string;
+}
+
 export default function Suscriptores() {
-  const [suscriptores, setSuscriptores] = useState<any[]>([]);
+  const [suscriptores, setSuscriptores] = useState<Suscriptor[]>([]);
   const [nombre, setNombre] = useState('');
   const [documento, setDocumento] = useState('');
   const [direccion, setDireccion] = useState('');
+  
   const [guardando, setGuardando] = useState(false);
+  const [cargandoLista, setCargandoLista] = useState(true); // 2. Nuevo estado de carga
 
-  // Función para traer los suscriptores desde Supabase
   const cargarSuscriptores = async () => {
+    setCargandoLista(true);
     const { data, error } = await supabase
       .from('suscriptores')
       .select('*')
       .order('nombre_completo', { ascending: true });
     
-    if (data) setSuscriptores(data);
+    if (error) {
+      console.error("Error cargando suscriptores:", error.message);
+      // Opcional: mostrar un toast o mensaje de error en la UI
+    } else if (data) {
+      setSuscriptores(data as Suscriptor[]);
+    }
+    setCargandoLista(false);
   };
 
-  // Se ejecuta al cargar la página
   useEffect(() => {
     cargarSuscriptores();
   }, []);
 
-  // Función para guardar un nuevo suscriptor
   const guardarSuscriptor = async (e: React.FormEvent) => {
     e.preventDefault();
     setGuardando(true);
@@ -33,20 +48,21 @@ export default function Suscriptores() {
     const { error } = await supabase
       .from('suscriptores')
       .insert([{ 
-        nombre_completo: nombre, 
-        documento: documento, 
-        direccion: direccion 
-        // Nota: acueducto_id lo asociaremos más adelante cuando tengamos la sesión multi-tenant lista
+        nombre_completo: nombre.trim(), 
+        documento: documento.trim(), 
+        direccion: direccion.trim() 
+        // Nota: acueducto_id lo asociaremos más adelante
       }]);
 
     if (!error) {
       setNombre('');
       setDocumento('');
       setDireccion('');
-      cargarSuscriptores(); // Recargamos la lista
+      await cargarSuscriptores(); 
     } else {
       alert('Error al guardar: ' + error.message);
     }
+    
     setGuardando(false);
   };
 
@@ -81,7 +97,7 @@ export default function Suscriptores() {
             </div>
             <button 
               type="submit" disabled={guardando}
-              className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
+              className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
             >
               {guardando ? 'Guardando...' : 'Guardar Suscriptor'}
             </button>
@@ -102,24 +118,32 @@ export default function Suscriptores() {
                 </tr>
               </thead>
               <tbody>
-                {suscriptores.map((sub) => (
-                  <tr key={sub.id} className="border-b hover:bg-gray-50 text-sm">
-                    <td className="p-3">{sub.nombre_completo}</td>
-                    <td className="p-3">{sub.documento}</td>
-                    <td className="p-3">{sub.direccion}</td>
-                    <td className="p-3">
-                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                        {sub.estado}
-                      </span>
+                {/* 3. Renderizado condicional basado en el estado de carga */}
+                {cargandoLista ? (
+                  <tr>
+                    <td colSpan={4} className="p-4 text-center text-gray-500">
+                      Cargando suscriptores...
                     </td>
                   </tr>
-                ))}
-                {suscriptores.length === 0 && (
+                ) : suscriptores.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="p-4 text-center text-gray-500">
                       Aún no hay suscriptores registrados.
                     </td>
                   </tr>
+                ) : (
+                  suscriptores.map((sub) => (
+                    <tr key={sub.id} className="border-b hover:bg-gray-50 text-sm">
+                      <td className="p-3">{sub.nombre_completo}</td>
+                      <td className="p-3">{sub.documento}</td>
+                      <td className="p-3">{sub.direccion}</td>
+                      <td className="p-3">
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                          {sub.estado || 'Activo'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

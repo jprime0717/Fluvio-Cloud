@@ -1,18 +1,46 @@
-"use line";
 "use client";
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Printer, ArrowLeft, MessageCircle } from 'lucide-react';
+// ¡Añadimos las tijeras (Scissors) a los íconos!
+import { Printer, ArrowLeft, MessageCircle, Scissors } from 'lucide-react';
 import Link from 'next/link';
+
+interface Suscriptor {
+  id: string;
+  nombre_completo: string;
+  documento: string;
+  direccion: string;
+}
+
+interface Factura {
+  id: string;
+  monto: number;
+  estado: 'Pagado' | 'Pendiente';
+  fecha_emision: string;
+  mes: number;
+  anio: number;
+  suscriptor_id: string;
+  suscriptor: Suscriptor;
+}
+
+interface Config {
+  logo_url?: string;
+  nombre: string;
+  nit: string;
+  direccion: string;
+  telefono: string;
+  email: string;
+  mensaje_factura: string;
+}
 
 export default function FacturaPDF() {
   const params = useParams();
   const facturaId = params.id;
   
-  const [datos, setDatos] = useState<any>(null);
-  const [config, setConfig] = useState<any>(null);
+  const [datos, setDatos] = useState<Factura | null>(null);
+  const [config, setConfig] = useState<Config | null>(null);
   const [deudaTotal, setDeudaTotal] = useState<number>(0);
   const [mesesMora, setMesesMora] = useState<number>(0);
   const [cargando, setCargando] = useState(true);
@@ -164,7 +192,7 @@ export default function FacturaPDF() {
         </table>
 
         {/* Totales */}
-        <div className="flex justify-end mb-12">
+        <div className="flex justify-end mb-8">
           <div className="w-2/3 md:w-1/2 bg-gray-50 p-5 rounded-lg border border-gray-300 shadow-sm">
             <div className="flex justify-between font-black text-2xl text-gray-800">
               <span>TOTAL:</span>
@@ -184,6 +212,64 @@ export default function FacturaPDF() {
         <div className="border-t-2 border-gray-200 pt-6 text-center text-gray-600 text-sm">
           <p className="font-medium italic">"{config.mensaje_factura}"</p>
           <p className="mt-2 text-xs text-gray-400">Generado por Acuasoft Clone - Plataforma SaaS</p>
+        </div>
+
+        {/* ========================================= */}
+        {/* --- INICIO LÍNEA DE CORTE --- */}
+        {/* ========================================= */}
+        <div className="relative flex items-center py-8 print:py-6 mt-4">
+          <div className="flex-grow border-t-2 border-dashed border-gray-400"></div>
+          <span className="flex-shrink-0 mx-4 text-gray-500 flex items-center gap-2">
+            <Scissors size={20} className="transform -rotate-90 text-gray-400" />
+            <span className="text-xs uppercase tracking-widest text-gray-400 print:text-[10px]">
+              Línea de corte
+            </span>
+          </span>
+          <div className="flex-grow border-t-2 border-dashed border-gray-400"></div>
+        </div>
+
+        {/* ========================================= */}
+        {/* --- INICIO DESPRENDIBLE DE PAGO --- */}
+        {/* ========================================= */}
+        <div className="border-2 border-gray-800 rounded-xl p-6 bg-white print:border print:border-gray-500 print:shadow-none shadow-sm mb-4">
+          <div className="flex justify-between items-center border-b border-gray-300 pb-4 mb-4">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 uppercase tracking-wide">
+                Desprendible de Pago
+              </h3>
+              <p className="text-xs font-mono text-gray-500 mt-1">Copia para el Acueducto</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Período Facturado</p>
+              <p className="font-bold text-gray-800">Mes {datos.mes} / {datos.anio}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-gray-500 text-xs uppercase">Suscriptor:</p>
+              <p className="font-bold text-gray-800 text-lg">{datos.suscriptor.nombre_completo}</p>
+            </div>
+            
+            <div className="text-right">
+              <p className="text-gray-500 text-xs uppercase">N° Factura:</p>
+              <p className="font-mono text-gray-800">#{datos.id.substring(0, 6).toUpperCase()}</p>
+            </div>
+
+            <div>
+              <p className="text-gray-500 text-xs uppercase">Estado:</p>
+              <p className={`font-bold ${datos.estado === 'Pagado' ? 'text-green-600' : 'text-red-600'}`}>
+                {datos.estado}
+              </p>
+            </div>
+            
+            <div className="text-right">
+              <p className="text-gray-500 text-xs uppercase">Total a Pagar:</p>
+              <p className={`font-bold text-2xl print:text-black ${datos.estado === 'Pagado' ? 'text-green-700' : 'text-blue-700'}`}>
+                ${totalMostrar.toLocaleString('es-CO')}
+              </p>
+            </div>
+          </div>
         </div>
 
       </div>

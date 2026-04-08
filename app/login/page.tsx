@@ -37,7 +37,7 @@ export default function Login() {
       <div className="bg-white max-w-md w-full p-8 rounded-xl shadow-2xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-black text-blue-900 mb-2">Fluvio-Cloud</h1>
-          <p className="text-gray-500 font-medium">Ingresa a tu panel de administración</p>
+          <p className="text-gray-800 font-medium">Ingresa a tu panel de administración</p>
         </div>
 
         {error && (
@@ -49,9 +49,9 @@ export default function Login() {
 
         <form onSubmit={iniciarSesion} className="space-y-6">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Correo Electrónico</label>
+            <label className="text-gray-800 text-sm font-medium">Correo electrónico</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
+              <Mail className="absolute left-3 top-3 text-gray-700" size={20} />
               <input 
                 type="email" 
                 value={email}
@@ -64,9 +64,9 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Contraseña</label>
+            <label className="text-gray-800 text-sm font-medium">Contraseña</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
+              <Lock className="absolute left-3 top-3 text-gray-700" size={20} />
               <input 
                 type="password" 
                 value={password}
