@@ -58,7 +58,8 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 /* INPUTS CON TEXTO OSCURO Y PLACEHOLDER VISIBLE */
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-gray-900 bg-white placeholder-gray-500 font-medium"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white placeholder-gray-500 font-medium text-black dark:text-black"
+                style={{ color: '#000000' }}
                 placeholder="admin@acueducto.com"
               />
             </div>
@@ -73,7 +74,8 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-gray-900 bg-white placeholder-gray-500 font-medium"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white placeholder-gray-500 font-medium text-black dark:text-black"
+                style={{ color: '#000000' }}
                 placeholder="••••••••"
               />
             </div>
