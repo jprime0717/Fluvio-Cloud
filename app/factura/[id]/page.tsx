@@ -24,10 +24,10 @@ export default function FacturaPDF() {
       const { data: configData } = await supabase.from('acueductos').select('*').limit(1).single();
       if (configData) setConfig(configData);
 
-      // 2. Cargamos la factura actual y el suscriptor (¡AÑADIMOS tipo_suscriptor AQUÍ!)
+      // 2. Cargamos la factura actual y el suscriptor
       const { data: facturaData } = await supabase
         .from('facturas')
-        .select(`*, suscriptor:suscriptor_id (id, nombre_completo, documento, direccion, tipo_suscriptor)`)
+        .select(`*, suscriptor:suscriptor_id (id, nombre_completo, documento, numero_medidor, direccion, tipo_suscriptor)`)
         .eq('id', facturaId)
         .single();
 
@@ -103,6 +103,8 @@ export default function FacturaPDF() {
         <div className="flex justify-between items-start border-b-2 border-blue-900 pb-6 mb-6">
           <div className="flex items-center gap-4">
             {config.logo_url && (
+              /* IGNORAMOS EL WARNING DE NEXT.JS SOBRE EL IMG AQUÍ */
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img src={config.logo_url} alt="Logo" className="w-24 h-24 object-contain rounded" onError={(e) => e.currentTarget.style.display = 'none'} />
             )}
             <div>
@@ -125,8 +127,14 @@ export default function FacturaPDF() {
           <div className="bg-gray-50 p-4 rounded border border-gray-200">
             <h3 className="text-xs font-black text-gray-500 uppercase mb-2">Facturar a:</h3>
             <p className="text-lg font-extrabold text-gray-800">{datos.suscriptor.nombre_completo}</p>
-            <p className="text-gray-700 font-medium">CC/NIT: {datos.suscriptor.documento}</p>
-            <p className="text-gray-700 font-medium">Predio: {datos.suscriptor.direccion}</p>
+            
+            {/* OCULTAMOS EL DOCUMENTO Y DEJAMOS SOLO EL MEDIDOR Y LA DIRECCIÓN */}
+            <p className="text-gray-700 font-medium mt-1">
+              <span className="font-bold">Medidor:</span> {datos.suscriptor.numero_medidor || 'N/A'}
+            </p>
+            <p className="text-gray-700 font-medium">
+              <span className="font-bold">Dirección:</span> {datos.suscriptor.direccion}
+            </p>
             
             {/* NUEVO: Etiqueta Visual del Tipo de Suscriptor */}
             <div className="mt-3">
@@ -196,20 +204,23 @@ export default function FacturaPDF() {
 
         {/* Pie de página dinámico */}
         <div className="border-t-2 border-gray-200 pt-6 text-center text-gray-600 text-sm">
-          <p className="font-bold italic">"{config.mensaje_factura}"</p>
+          {/* AQUÍ CORREGIMOS EL ERROR DE LAS COMILLAS (&quot;) */}
+          <p className="font-bold italic">&quot;{config.mensaje_factura}&quot;</p>
           <p className="mt-2 text-xs text-gray-400 font-medium">Generado por Acuasoft Clone - Plataforma SaaS</p>
         </div>
 
         {/* --- INICIO LÍNEA DE CORTE --- */}
         <div className="relative flex items-center py-8 print:py-6 mt-4">
-          <div className="flex-grow border-t-2 border-dashed border-gray-400"></div>
-          <span className="flex-shrink-0 mx-4 text-gray-500 flex items-center gap-2">
+          {/* AQUÍ CORREGIMOS LAS CLASES FLEX-GROW A GROW */}
+          <div className="grow border-t-2 border-dashed border-gray-400"></div>
+          {/* AQUÍ CORREGIMOS LAS CLASES FLEX-SHRINK-0 A SHRINK-0 */}
+          <span className="shrink-0 mx-4 text-gray-500 flex items-center gap-2">
             <Scissors size={20} className="transform -rotate-90 text-gray-400" />
             <span className="text-xs uppercase font-bold tracking-widest text-gray-400 print:text-[10px]">
               Línea de corte
             </span>
           </span>
-          <div className="flex-grow border-t-2 border-dashed border-gray-400"></div>
+          <div className="grow border-t-2 border-dashed border-gray-400"></div>
         </div>
 
         {/* --- INICIO DESPRENDIBLE DE PAGO --- */}
@@ -231,6 +242,10 @@ export default function FacturaPDF() {
             <div>
               <p className="text-gray-500 text-xs font-bold uppercase">Suscriptor:</p>
               <p className="font-extrabold text-gray-900 text-lg">{datos.suscriptor.nombre_completo}</p>
+              
+              {/* OCULTAMOS TAMBIÉN EL DOCUMENTO DEL DESPRENDIBLE */}
+              <p className="text-gray-600 text-xs font-bold mt-1">Medidor: {datos.suscriptor.numero_medidor || 'N/A'}</p>
+              
               {/* NUEVO: Tipo en el desprendible */}
               <p className="text-xs font-bold text-blue-700 mt-1 uppercase">{datos.suscriptor.tipo_suscriptor || 'Residencial'}</p>
             </div>

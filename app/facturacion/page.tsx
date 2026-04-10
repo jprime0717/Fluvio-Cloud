@@ -17,7 +17,7 @@ export default function Facturacion() {
     setGenerando(true);
     setMensaje('Obteniendo configuración de tarifas...');
 
-    // 1. NUEVO: Obtenemos los precios de la tabla acueductos
+    // 1. Obtenemos los precios de la tabla acueductos
     const { data: config, error: errConfig } = await supabase
       .from('acueductos')
       .select('tarifa_fija, tarifa_comercial_extra, tarifa_industrial_extra')
@@ -32,10 +32,10 @@ export default function Facturacion() {
 
     setMensaje('Buscando suscriptores...');
 
-    // 2. MODIFICADO: Ahora también pedimos el 'tipo_suscriptor'
+    // 2. MODIFICADO: Agregamos 'numero_medidor' a la consulta por si se necesita listar consumos en el futuro
     const { data: suscriptores, error: errSub } = await supabase
       .from('suscriptores')
-      .select('id, tipo_suscriptor');
+      .select('id, tipo_suscriptor, numero_medidor');
 
     if (errSub || !suscriptores) {
       setMensaje('Error al buscar suscriptores: ' + errSub?.message);
@@ -96,7 +96,7 @@ export default function Facturacion() {
         suscriptor_id: sub.id,
         mes: MES_ACTUAL,
         anio: ANIO_ACTUAL,
-        monto: totalFactura, // <-- ¡Aquí va el monto ya sumado!
+        monto: totalFactura,
         estado: 'Pendiente'
       };
     });

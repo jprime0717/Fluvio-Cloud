@@ -7,8 +7,9 @@ interface Suscriptor {
   id: number; 
   nombre_completo: string;
   documento: string;
+  numero_medidor: string;
   direccion: string;
-  tipo_suscriptor: string; // <-- Nuevo campo para TypeScript
+  tipo_suscriptor: string;
   estado: string;
 }
 
@@ -16,14 +17,15 @@ export default function Suscriptores() {
   const [suscriptores, setSuscriptores] = useState<Suscriptor[]>([]);
   const [nombre, setNombre] = useState('');
   const [documento, setDocumento] = useState('');
+  const [numero_medidor, setNumeroMedidor] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [tipo, setTipo] = useState('Residencial'); // <-- Estado para el tipo por defecto
+  const [tipo, setTipo] = useState('Residencial'); 
   
   const [guardando, setGuardando] = useState(false);
-  const [cargandoLista, setCargandoLista] = useState(true);
+  const [cargandoLista, setCargandoLista] = useState(true); // Ya inicia en true
 
-  const cargarSuscriptores = async () => {
-    setCargandoLista(true);
+  // Separamos la consulta para evitar el warning de ESLint
+  const obtenerDatos = async () => {
     const { data, error } = await supabase
       .from('suscriptores')
       .select('*')
@@ -31,12 +33,14 @@ export default function Suscriptores() {
     
     if (error) console.error("Error cargando suscriptores:", error.message);
     else if (data) setSuscriptores(data as Suscriptor[]);
-    
-    setCargandoLista(false);
   };
 
   useEffect(() => {
-    cargarSuscriptores();
+    const init = async () => {
+      await obtenerDatos();
+      setCargandoLista(false); // Solo actualizamos al terminar de cargar
+    };
+    init();
   }, []);
 
   const guardarSuscriptor = async (e: React.FormEvent) => {
@@ -47,14 +51,15 @@ export default function Suscriptores() {
       .from('suscriptores')
       .insert([{ 
         nombre_completo: nombre.trim(), 
-        documento: documento.trim(), 
+        documento: documento.trim(),
+        numero_medidor: numero_medidor.trim(),
         direccion: direccion.trim(),
-        tipo_suscriptor: tipo // <-- Guardamos el tipo en Supabase
+        tipo_suscriptor: tipo 
       }]);
 
     if (!error) {
-      setNombre(''); setDocumento(''); setDireccion(''); setTipo('Residencial');
-      await cargarSuscriptores(); 
+      setNombre(''); setDocumento(''); setDireccion(''); setNumeroMedidor(''); setTipo('Residencial');
+      await obtenerDatos(); // Recargamos silenciosamente sin mostrar el spinner
     } else {
       alert('Error al guardar: ' + error.message);
     }
@@ -74,7 +79,7 @@ export default function Suscriptores() {
               <label className="block text-sm font-semibold text-gray-900 mb-1">Nombre Completo</label>
               <input 
                 type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black dark:text-black font-medium" 
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium" 
                 style={{ color: '#000000' }}
               />
             </div>
@@ -82,26 +87,37 @@ export default function Suscriptores() {
               <label className="block text-sm font-semibold text-gray-900 mb-1">Documento / Cédula</label>
               <input 
                 type="text" required value={documento} onChange={(e) => setDocumento(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black dark:text-black font-medium" 
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium" 
                 style={{ color: '#000000' }}
               />
             </div>
+
+            {/* CAMPO VISUAL DEL MEDIDOR */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1">Número de Medidor (Opcional)</label>
+              <input 
+                type="text" value={numero_medidor} onChange={(e) => setNumeroMedidor(e.target.value)}
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium" 
+                style={{ color: '#000000' }}
+                placeholder="Ej: 1234567"
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1">Dirección / Predio</label>
               <input 
                 type="text" required value={direccion} onChange={(e) => setDireccion(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black dark:text-black font-medium" 
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium" 
                 style={{ color: '#000000' }}
               />
             </div>
             
-            {/* NUEVO CAMPO: Selector de Tipo */}
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1">Tipo de Suscriptor</label>
               <select 
                 value={tipo} 
                 onChange={(e) => setTipo(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black dark:text-black font-medium"
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium"
                 style={{ color: '#000000' }}
               >
                 <option value="Residencial">Residencial</option>
@@ -128,6 +144,7 @@ export default function Suscriptores() {
                 <tr className="bg-gray-100 border-b border-gray-200">
                   <th className="p-3 text-sm font-bold text-gray-900">Nombre</th>
                   <th className="p-3 text-sm font-bold text-gray-900">Documento</th>
+                  <th className="p-3 text-sm font-bold text-gray-900">Medidor</th>
                   <th className="p-3 text-sm font-bold text-gray-900">Dirección</th>
                   <th className="p-3 text-sm font-bold text-gray-900">Tipo</th>
                   <th className="p-3 text-sm font-bold text-gray-900">Estado</th>
@@ -136,13 +153,13 @@ export default function Suscriptores() {
               <tbody className="text-gray-900">
                 {cargandoLista ? (
                   <tr>
-                    <td colSpan={5} className="p-4 text-center font-medium text-gray-600">
+                    <td colSpan={6} className="p-4 text-center font-medium text-gray-600">
                       Cargando suscriptores...
                     </td>
                   </tr>
                 ) : suscriptores.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-4 text-center font-medium text-gray-600">
+                    <td colSpan={6} className="p-4 text-center font-medium text-gray-600">
                       Aún no hay suscriptores registrados.
                     </td>
                   </tr>
@@ -151,6 +168,7 @@ export default function Suscriptores() {
                     <tr key={sub.id} className="border-b border-gray-200 hover:bg-gray-50 text-sm">
                       <td className="p-3 font-semibold">{sub.nombre_completo}</td>
                       <td className="p-3 font-medium">{sub.documento}</td>
+                      <td className="p-3 font-medium text-gray-600">{sub.numero_medidor || 'N/A'}</td>
                       <td className="p-3 font-medium">{sub.direccion}</td>
                       <td className="p-3 font-medium">
                         <span className={`px-2 py-1 rounded text-xs font-bold ${
