@@ -41,26 +41,26 @@ export default function ImpresionMasiva() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-200 p-8">
-      
+    <div className="min-h-screen bg-gray-200 p-4 md:p-8">
+
       {/* Controles de Búsqueda (Se ocultan al imprimir gracias a print:hidden) */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8 max-w-4xl mx-auto print:hidden">
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 max-w-4xl mx-auto print:hidden">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Impresión Masiva por Lote</h2>
-        <form onSubmit={buscarFacturas} className="flex gap-4 items-end">
+        <form onSubmit={buscarFacturas} className="flex flex-wrap gap-4 items-end">
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Mes</label>
-            <input type="number" min="1" max="12" value={mes} onChange={(e) => setMes(Number(e.target.value))} className="w-24 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+            <input type="number" min="1" max="12" value={mes} onChange={(e) => setMes(Number(e.target.value))} className="w-24 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black" style={{ color: '#000000' }} />
           </div>
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Año</label>
-            <input type="number" min="2020" value={anio} onChange={(e) => setAnio(Number(e.target.value))} className="w-32 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+            <input type="number" min="2020" value={anio} onChange={(e) => setAnio(Number(e.target.value))} className="w-32 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black" style={{ color: '#000000' }} />
           </div>
           <button type="submit" disabled={buscando} className="bg-gray-800 text-white px-6 py-2 rounded flex items-center gap-2 hover:bg-black transition">
             <Search size={20} /> {buscando ? 'Buscando...' : 'Buscar Lote'}
           </button>
-          
+
           {facturas.length > 0 && (
-            <button type="button" onClick={imprimirTodo} className="bg-blue-600 text-white px-6 py-2 rounded flex items-center gap-2 hover:bg-blue-700 font-bold ml-auto shadow-lg">
+            <button type="button" onClick={imprimirTodo} className="w-full sm:w-auto justify-center bg-blue-600 text-white px-6 py-2 rounded flex items-center gap-2 hover:bg-blue-700 font-bold sm:ml-auto shadow-lg">
               <Printer size={20} /> Imprimir {facturas.length} Facturas
             </button>
           )}

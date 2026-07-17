@@ -5,6 +5,14 @@
   --foreground: #111827; /* Más oscuro para mejor contraste por defecto (equivalente a gray-900) */
 }
 
+/* La UI está diseñada solo en tema claro (tarjetas bg-white en todas las
+   pantallas). Sin esto, el navegador aplica su propio tema oscuro nativo
+   a inputs/selects cuando el sistema operativo está en modo oscuro,
+   dejando el texto desvanecido dentro de las tarjetas blancas. */
+html {
+  color-scheme: light;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -12,12 +20,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #f3f4f6;
-  }
-}
+/* Se quitó a propósito el @media (prefers-color-scheme: dark) que había
+   aquí: cambiaba el fondo del body a casi negro (#0a0a0a) pero ninguna
+   pantalla de la app fue diseñada para eso (todas usan texto oscuro
+   pensado para tarjetas/fondos claros), así que en navegadores con tema
+   oscuro el sitio quedaba con texto gris oscuro sobre fondo casi negro,
+   prácticamente ilegible. La app es de tema claro fijo. */
 
 body {
   background: var(--background);

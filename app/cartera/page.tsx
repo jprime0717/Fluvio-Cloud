@@ -46,22 +46,22 @@ export default function HistorialCartera() {
   };
 
   return (
-    <div className="p-8">
-      <h2 className="text-3xl font-bold text-gray-800 mb-8">Historial de Cartera (Matriz Anual)</h2>
+    <div className="p-4 md:p-8">
+      <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-8">Historial de Cartera (Matriz Anual)</h2>
 
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex items-center justify-between">
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Cambiamos el onSubmit a la nueva función */}
-        <form onSubmit={manejarBusqueda} className="flex gap-4 items-end">
+        <form onSubmit={manejarBusqueda} className="flex flex-wrap gap-4 items-end">
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Año de Consulta</label>
-            <input type="number" value={anio} onChange={(e) => setAnio(Number(e.target.value))} className="w-32 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none font-bold text-lg" />
+            <input type="number" value={anio} onChange={(e) => setAnio(Number(e.target.value))} className="w-32 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none font-bold text-lg bg-white text-black" style={{ color: '#000000' }} />
           </div>
           <button type="submit" disabled={cargando} className="bg-blue-600 text-white px-6 py-2 rounded flex items-center gap-2 hover:bg-blue-700 transition font-bold h-11">
             <Search size={20} /> {cargando ? 'Calculando...' : 'Ver Matriz'}
           </button>
         </form>
 
-        <div className="flex gap-4 text-sm font-medium border p-3 rounded-lg bg-gray-50">
+        <div className="flex flex-wrap gap-4 text-sm font-medium border p-3 rounded-lg bg-gray-50">
           <span className="flex items-center gap-1 text-green-600"><CheckCircle size={16}/> Pagado</span>
           <span className="flex items-center gap-1 text-red-600"><XCircle size={16}/> Pendiente (Mora)</span>
           <span className="flex items-center gap-1 text-gray-400"><MinusCircle size={16}/> No facturado</span>
