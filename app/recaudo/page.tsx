@@ -24,14 +24,25 @@ export default function Recaudo() {
     const termino = busqueda.trim().replace(/[,."'()]/g, '');
 
     // CORREGIDO: Quitamos ", error: errSub" porque no lo estábamos usando
+    // Pedimos hasta 2 resultados (no 1) para poder detectar coincidencias
+    // ambiguas: varios suscriptores del censo original comparten el mismo
+    // texto de medidor ("compartido", "no se ve # medidor", etc.), así que
+    // si alguien busca por ese texto no queremos devolver un suscriptor
+    // cualquiera al azar.
     const { data: suscriptores } = await supabase
       .from('suscriptores')
       .select('id, nombre, apellido, documento, nuid, numero_medidor')
       .or(`documento.eq.${termino},numero_medidor.eq.${termino},nuid.eq.${termino}`)
-      .limit(1); 
+      .limit(2);
 
     if (!suscriptores || suscriptores.length === 0) {
       setMensaje('No se encontró ningún suscriptor con ese documento o número de medidor.');
+      setBuscando(false);
+      return;
+    }
+
+    if (suscriptores.length > 1) {
+      setMensaje('Ese término coincide con más de un suscriptor (por ejemplo, varios comparten el mismo texto de medidor). Busca por el NUID o el documento en su lugar.');
       setBuscando(false);
       return;
     }
