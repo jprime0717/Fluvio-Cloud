@@ -10,6 +10,7 @@ export default function ResumenDashboard() {
   const [metricasMes, setMetricasMes] = useState({ facturado: 0, pagado: 0, pendiente: 0 });
   const [mesActualLabel, setMesActualLabel] = useState('');
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState('');
 
   useEffect(() => {
     const cargarDatosDashboard = async () => {
@@ -29,8 +30,11 @@ export default function ResumenDashboard() {
           .from('suscriptores')
           .select('*', { count: 'exact', head: true });
         
-        if (count) setTotalSuscriptores(count);
-        if (errCount) console.error("Error contando suscriptores:", errCount);
+        if (typeof count === 'number') setTotalSuscriptores(count);
+        if (errCount) {
+          console.error("Error contando suscriptores:", errCount);
+          setErrorCarga('No se pudieron cargar los datos del resumen. Los números mostrados pueden estar incompletos.');
+        }
 
         // 2. Consulta Real: Obtener todas las facturas del MES ACTUAL
         const { data: facturasMes, error: errFacs } = await supabase
@@ -39,7 +43,10 @@ export default function ResumenDashboard() {
           .eq('mes', numeroMes)
           .eq('anio', anioActual);
 
-        if (errFacs) console.error("Error cargando facturas del mes:", errFacs);
+        if (errFacs) {
+          console.error("Error cargando facturas del mes:", errFacs);
+          setErrorCarga('No se pudieron cargar los datos del resumen. Los números mostrados pueden estar incompletos.');
+        }
 
         // 3. Magia: Calculamos los totales usando reduce()
         if (facturasMes) {
@@ -56,6 +63,7 @@ export default function ResumenDashboard() {
 
       } catch (error) {
         console.error("Error en el Dashboard:", error);
+        setErrorCarga('No se pudieron cargar los datos del resumen. Los números mostrados pueden estar incompletos.');
       } finally {
         setCargando(false);
       }
@@ -83,6 +91,12 @@ export default function ResumenDashboard() {
           <p className="text-gray-500 text-sm md:text-lg mt-1">Estado actual de la asociación de acueducto</p>
         </div>
       </div>
+
+      {errorCarga && (
+        <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded mb-6 font-medium text-sm">
+          {errorCarga}
+        </div>
+      )}
 
       {/* 1. KPI Principal Responsivo */}
       <div className="bg-white p-6 md:p-8 rounded-2xl shadow-xl border border-gray-100 mb-8 md:mb-10 flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center md:text-left">
