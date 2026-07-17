@@ -101,15 +101,20 @@ export default function Facturacion() {
       };
     });
 
-    // 6. Insertamos las nuevas facturas a la base de datos
-    const { error: errFac } = await supabase
+    // 6. Insertamos las nuevas facturas a la base de datos.
+    // Usamos upsert+ignoreDuplicates (en vez de insert) como red de seguridad:
+    // si dos personas generan el mismo mes al mismo tiempo (o se hace doble clic),
+    // la restricción UNIQUE(suscriptor_id, mes, anio) evita facturas duplicadas
+    // en lugar de que el segundo intento falle o inserte de más.
+    const { data: insertadas, error: errFac } = await supabase
       .from('facturas')
-      .insert(nuevasFacturas);
+      .upsert(nuevasFacturas, { onConflict: 'suscriptor_id,mes,anio', ignoreDuplicates: true })
+      .select('id');
 
     if (errFac) {
       setMensaje('Error al generar facturas: ' + errFac.message);
     } else {
-      setMensaje(`¡Éxito! Se generaron ${suscriptoresSinFactura.length} facturas calculadas con sus tarifas correspondientes.`);
+      setMensaje(`¡Éxito! Se generaron ${insertadas?.length ?? suscriptoresSinFactura.length} facturas calculadas con sus tarifas correspondientes.`);
     }
 
     setGenerando(false);
