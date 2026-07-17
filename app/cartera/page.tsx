@@ -17,7 +17,7 @@ export default function HistorialCartera() {
     setCargando(true);
 
     // 1. Traemos todos los suscriptores
-    const { data: subs } = await supabase.from('suscriptores').select('id, nombre_completo').order('nombre_completo');
+    const { data: subs } = await supabase.from('suscriptores').select('id, nombre, apellido').order('nombre');
     if (subs) setSuscriptores(subs);
 
     // 2. Traemos todas las facturas de ese año
@@ -82,7 +82,7 @@ export default function HistorialCartera() {
             {suscriptores.map((sub, index) => (
               <tr key={sub.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                 <td className="p-4 font-bold text-gray-800 border-r border-gray-200 sticky left-0 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 truncate max-w-50">
-                  {sub.nombre_completo}
+                  {sub.nombre} {sub.apellido}
                 </td>
                 
                 {/* Columnas de los 12 meses */}

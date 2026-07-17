@@ -4,9 +4,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface Suscriptor {
-  id: number; 
-  nombre_completo: string;
+  id: number;
+  nombre: string;
+  apellido: string;
   documento: string;
+  telefono: string;
+  nuid: string;
   numero_medidor: string;
   direccion: string;
   tipo_suscriptor: string;
@@ -16,10 +19,13 @@ interface Suscriptor {
 export default function Suscriptores() {
   const [suscriptores, setSuscriptores] = useState<Suscriptor[]>([]);
   const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
   const [documento, setDocumento] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [nuid, setNuid] = useState('');
   const [numero_medidor, setNumeroMedidor] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [tipo, setTipo] = useState('Residencial'); 
+  const [tipo, setTipo] = useState('Residencial');
   
   const [guardando, setGuardando] = useState(false);
   const [cargandoLista, setCargandoLista] = useState(true); // Ya inicia en true
@@ -29,7 +35,7 @@ export default function Suscriptores() {
     const { data, error } = await supabase
       .from('suscriptores')
       .select('*')
-      .order('nombre_completo', { ascending: true });
+      .order('nombre', { ascending: true });
     
     if (error) console.error("Error cargando suscriptores:", error.message);
     else if (data) setSuscriptores(data as Suscriptor[]);
@@ -49,16 +55,19 @@ export default function Suscriptores() {
 
     const { error } = await supabase
       .from('suscriptores')
-      .insert([{ 
-        nombre_completo: nombre.trim(), 
+      .insert([{
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
         documento: documento.trim(),
+        telefono: telefono.trim() || null,
+        nuid: nuid.trim() || null,
         numero_medidor: numero_medidor.trim(),
         direccion: direccion.trim(),
-        tipo_suscriptor: tipo 
+        tipo_suscriptor: tipo
       }]);
 
     if (!error) {
-      setNombre(''); setDocumento(''); setDireccion(''); setNumeroMedidor(''); setTipo('Residencial');
+      setNombre(''); setApellido(''); setDocumento(''); setTelefono(''); setNuid(''); setDireccion(''); setNumeroMedidor(''); setTipo('Residencial');
       await obtenerDatos(); // Recargamos silenciosamente sin mostrar el spinner
     } else {
       alert('Error al guardar: ' + error.message);
@@ -76,18 +85,43 @@ export default function Suscriptores() {
           <h2 className="text-xl font-extrabold text-gray-900 mb-5">Nuevo Suscriptor</h2>
           <form onSubmit={guardarSuscriptor} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1">Nombre Completo</label>
-              <input 
+              <label className="block text-sm font-semibold text-gray-900 mb-1">Nombre</label>
+              <input
                 type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium" 
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium"
                 style={{ color: '#000000' }}
               />
             </div>
             <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1">Apellido</label>
+              <input
+                type="text" required value={apellido} onChange={(e) => setApellido(e.target.value)}
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium"
+                style={{ color: '#000000' }}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1">Teléfono</label>
+              <input
+                type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)}
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium"
+                style={{ color: '#000000' }}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1">NUID</label>
+              <input
+                type="text" value={nuid} onChange={(e) => setNuid(e.target.value)}
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium"
+                style={{ color: '#000000' }}
+                placeholder="Ej: A-001"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1">Documento / Cédula</label>
-              <input 
+              <input
                 type="text" required value={documento} onChange={(e) => setDocumento(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium" 
+                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium"
                 style={{ color: '#000000' }}
               />
             </div>
@@ -143,7 +177,9 @@ export default function Suscriptores() {
               <thead>
                 <tr className="bg-gray-100 border-b border-gray-200">
                   <th className="p-3 text-sm font-bold text-gray-900">Nombre</th>
-                  <th className="p-3 text-sm font-bold text-gray-900">Documento</th>
+                  <th className="p-3 text-sm font-bold text-gray-900">Apellido</th>
+                  <th className="p-3 text-sm font-bold text-gray-900">NUID</th>
+                  <th className="p-3 text-sm font-bold text-gray-900">Teléfono</th>
                   <th className="p-3 text-sm font-bold text-gray-900">Medidor</th>
                   <th className="p-3 text-sm font-bold text-gray-900">Dirección</th>
                   <th className="p-3 text-sm font-bold text-gray-900">Tipo</th>
@@ -153,21 +189,23 @@ export default function Suscriptores() {
               <tbody className="text-gray-900">
                 {cargandoLista ? (
                   <tr>
-                    <td colSpan={6} className="p-4 text-center font-medium text-gray-600">
+                    <td colSpan={8} className="p-4 text-center font-medium text-gray-600">
                       Cargando suscriptores...
                     </td>
                   </tr>
                 ) : suscriptores.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-4 text-center font-medium text-gray-600">
+                    <td colSpan={8} className="p-4 text-center font-medium text-gray-600">
                       Aún no hay suscriptores registrados.
                     </td>
                   </tr>
                 ) : (
                   suscriptores.map((sub) => (
                     <tr key={sub.id} className="border-b border-gray-200 hover:bg-gray-50 text-sm">
-                      <td className="p-3 font-semibold">{sub.nombre_completo}</td>
-                      <td className="p-3 font-medium">{sub.documento}</td>
+                      <td className="p-3 font-semibold">{sub.nombre}</td>
+                      <td className="p-3 font-semibold">{sub.apellido}</td>
+                      <td className="p-3 font-medium">{sub.nuid || 'N/A'}</td>
+                      <td className="p-3 font-medium">{sub.telefono || 'N/A'}</td>
                       <td className="p-3 font-medium text-gray-600">{sub.numero_medidor || 'N/A'}</td>
                       <td className="p-3 font-medium">{sub.direccion}</td>
                       <td className="p-3 font-medium">

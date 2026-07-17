@@ -27,7 +27,7 @@ export default function FacturaPDF() {
       // 2. Cargamos la factura actual y el suscriptor
       const { data: facturaData } = await supabase
         .from('facturas')
-        .select(`*, suscriptor:suscriptor_id (id, nombre_completo, documento, numero_medidor, direccion, tipo_suscriptor)`)
+        .select(`*, suscriptor:suscriptor_id (id, nombre, apellido, documento, nuid, numero_medidor, direccion, tipo_suscriptor)`)
         .eq('id', facturaId)
         .single();
 
@@ -61,7 +61,7 @@ export default function FacturaPDF() {
     const urlFactura = window.location.href;
     const montoMostrar = datos.estado === 'Pendiente' ? deudaTotal : datos.monto;
     
-    const mensaje = `Hola ${datos.suscriptor.nombre_completo}, te compartimos tu factura del ${config?.nombre || 'Acueducto'}. Total a pagar: $${montoMostrar.toLocaleString('es-CO')}. Puedes verla y descargarla aquí: ${urlFactura}`;
+    const mensaje = `Hola ${datos.suscriptor.nombre} ${datos.suscriptor.apellido}, te compartimos tu factura del ${config?.nombre || 'Acueducto'}. Total a pagar: $${montoMostrar.toLocaleString('es-CO')}. Puedes verla y descargarla aquí: ${urlFactura}`;
     
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
   };
@@ -126,10 +126,13 @@ export default function FacturaPDF() {
         <div className="mb-8 grid grid-cols-2 gap-4">
           <div className="bg-gray-50 p-4 rounded border border-gray-200">
             <h3 className="text-xs font-black text-gray-500 uppercase mb-2">Facturar a:</h3>
-            <p className="text-lg font-extrabold text-gray-800">{datos.suscriptor.nombre_completo}</p>
-            
+            <p className="text-lg font-extrabold text-gray-800">{datos.suscriptor.nombre} {datos.suscriptor.apellido}</p>
+
             {/* OCULTAMOS EL DOCUMENTO Y DEJAMOS SOLO EL MEDIDOR Y LA DIRECCIÓN */}
             <p className="text-gray-700 font-medium mt-1">
+              <span className="font-bold">NUID:</span> {datos.suscriptor.nuid || 'N/A'}
+            </p>
+            <p className="text-gray-700 font-medium">
               <span className="font-bold">Medidor:</span> {datos.suscriptor.numero_medidor || 'N/A'}
             </p>
             <p className="text-gray-700 font-medium">
@@ -241,10 +244,10 @@ export default function FacturaPDF() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-gray-500 text-xs font-bold uppercase">Suscriptor:</p>
-              <p className="font-extrabold text-gray-900 text-lg">{datos.suscriptor.nombre_completo}</p>
-              
+              <p className="font-extrabold text-gray-900 text-lg">{datos.suscriptor.nombre} {datos.suscriptor.apellido}</p>
+
               {/* OCULTAMOS TAMBIÉN EL DOCUMENTO DEL DESPRENDIBLE */}
-              <p className="text-gray-600 text-xs font-bold mt-1">Medidor: {datos.suscriptor.numero_medidor || 'N/A'}</p>
+              <p className="text-gray-600 text-xs font-bold mt-1">NUID: {datos.suscriptor.nuid || 'N/A'} | Medidor: {datos.suscriptor.numero_medidor || 'N/A'}</p>
               
               {/* NUEVO: Tipo en el desprendible */}
               <p className="text-xs font-bold text-blue-700 mt-1 uppercase">{datos.suscriptor.tipo_suscriptor || 'Residencial'}</p>

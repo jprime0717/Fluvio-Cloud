@@ -16,7 +16,7 @@ export default function ListaFacturas() {
         .from('facturas')
         .select(`
           id, mes, anio, monto, estado,
-          suscriptor:suscriptor_id (nombre_completo, documento)
+          suscriptor:suscriptor_id (nombre, apellido, documento)
         `)
         .order('anio', { ascending: false })
         .order('mes', { ascending: false });
@@ -54,7 +54,7 @@ export default function ListaFacturas() {
             <tbody>
               {facturas.map((fac) => (
                 <tr key={fac.id} className="border-b hover:bg-gray-50 transition-colors">
-                  <td className="p-4 font-medium text-gray-800">{fac.suscriptor?.nombre_completo}</td>
+                  <td className="p-4 font-medium text-gray-800">{fac.suscriptor?.nombre} {fac.suscriptor?.apellido}</td>
                   <td className="p-4 text-gray-600">{fac.suscriptor?.documento}</td>
                   <td className="p-4 text-center text-gray-600">{fac.mes} / {fac.anio}</td>
                   <td className="p-4 text-right font-bold text-gray-800">${Number(fac.monto).toLocaleString('es-CO')}</td>

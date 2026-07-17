@@ -18,13 +18,16 @@ export default function Recaudo() {
     setMensaje('');
     setFacturasPendientes([]);
 
-    const termino = busqueda.trim();
+    // Se retiran caracteres con significado especial en la sintaxis de filtros
+    // de PostgREST (, . ( ) ') para evitar que el usuario inyecte condiciones
+    // adicionales en el .or() de abajo.
+    const termino = busqueda.trim().replace(/[,."'()]/g, '');
 
     // CORREGIDO: Quitamos ", error: errSub" porque no lo estábamos usando
     const { data: suscriptores } = await supabase
       .from('suscriptores')
-      .select('id, nombre_completo, documento, numero_medidor')
-      .or(`documento.eq.${termino},numero_medidor.eq.${termino}`)
+      .select('id, nombre, apellido, documento, nuid, numero_medidor')
+      .or(`documento.eq.${termino},numero_medidor.eq.${termino},nuid.eq.${termino}`)
       .limit(1); 
 
     if (!suscriptores || suscriptores.length === 0) {
@@ -47,12 +50,12 @@ export default function Recaudo() {
     if (facturas && facturas.length > 0) {
       const facturasConDatos = facturas.map(f => ({ 
         ...f, 
-        nombre_completo: suscriptor.nombre_completo,
+        nombre_completo: `${suscriptor.nombre} ${suscriptor.apellido}`,
         numero_medidor: suscriptor.numero_medidor
       }));
       setFacturasPendientes(facturasConDatos);
     } else {
-      setMensaje(`${suscriptor.nombre_completo} está al día. No tiene facturas pendientes.`);
+      setMensaje(`${suscriptor.nombre} ${suscriptor.apellido} está al día. No tiene facturas pendientes.`);
     }
 
     setBuscando(false);
@@ -86,14 +89,14 @@ export default function Recaudo() {
         <form onSubmit={buscarFacturas} className="flex gap-4 items-end">
           <div className="flex-1">
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              Buscar por Documento o Número de Medidor
+              Buscar por Documento, NUID o Número de Medidor
             </label>
             <input
               type="text"
               required
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Ej: 1088000000 o 1234567"
+              placeholder="Ej: A-001 o 101100047"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-black"
             />
           </div>
