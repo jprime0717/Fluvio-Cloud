@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { esSuperAdmin } from '@/lib/auth';
 import { Settings, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -18,7 +19,7 @@ export default function ConfiguracionGlobal() {
     const cargarConfiguracion = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session || !session.user.email?.toLowerCase().includes('super')) {
+      if (!session || !esSuperAdmin(session.user.email)) {
         router.push('/'); 
         return; 
       }
@@ -55,6 +56,12 @@ export default function ConfiguracionGlobal() {
     e.preventDefault();
     setGuardando(true);
     setMensaje('');
+
+    if (config.tarifa_fija < 0 || config.tarifa_comercial_extra < 0 || config.tarifa_industrial_extra < 0) {
+      setMensaje('Error: las tarifas no pueden ser negativas.');
+      setGuardando(false);
+      return;
+    }
 
     if (config.id) {
       const { error } = await supabase
@@ -121,15 +128,15 @@ export default function ConfiguracionGlobal() {
             {/* --- NUEVAS TARIFAS AQUÍ --- */}
             <div className="bg-gray-50 p-3 rounded border border-gray-200">
               <label className="block text-sm font-bold text-gray-900 mb-1">Tarifa Fija Mensual (Residencial)</label>
-              <input type="number" required value={config.tarifa_fija} onChange={(e) => setConfig({...config, tarifa_fija: Number(e.target.value)})} className="w-full border border-gray-300 p-2.5 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black dark:text-black font-bold text-lg" style={{ color: '#000000' }} />
+              <input type="number" min="0" required value={config.tarifa_fija} onChange={(e) => setConfig({...config, tarifa_fija: Number(e.target.value)})} className="w-full border border-gray-300 p-2.5 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black dark:text-black font-bold text-lg" style={{ color: '#000000' }} />
             </div>
             <div className="bg-blue-50 p-3 rounded border border-blue-100">
               <label className="block text-sm font-bold text-blue-900 mb-1">Valor Adicional Comercial (+)</label>
-              <input type="number" required value={config.tarifa_comercial_extra} onChange={(e) => setConfig({...config, tarifa_comercial_extra: Number(e.target.value)})} className="w-full border border-gray-300 p-2.5 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black dark:text-black font-bold text-lg" style={{ color: '#000000' }} />
+              <input type="number" min="0" required value={config.tarifa_comercial_extra} onChange={(e) => setConfig({...config, tarifa_comercial_extra: Number(e.target.value)})} className="w-full border border-gray-300 p-2.5 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black dark:text-black font-bold text-lg" style={{ color: '#000000' }} />
             </div>
             <div className="bg-purple-50 p-3 rounded border border-purple-100">
               <label className="block text-sm font-bold text-purple-900 mb-1">Valor Adicional Industrial (+)</label>
-              <input type="number" required value={config.tarifa_industrial_extra} onChange={(e) => setConfig({...config, tarifa_industrial_extra: Number(e.target.value)})} className="w-full border border-gray-300 p-2.5 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black dark:text-black font-bold text-lg" style={{ color: '#000000' }} />
+              <input type="number" min="0" required value={config.tarifa_industrial_extra} onChange={(e) => setConfig({...config, tarifa_industrial_extra: Number(e.target.value)})} className="w-full border border-gray-300 p-2.5 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black dark:text-black font-bold text-lg" style={{ color: '#000000' }} />
             </div>
           </div>
         </div>

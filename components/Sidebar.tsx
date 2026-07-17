@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { esSuperAdmin } from '@/lib/auth';
 // Agregamos Menu y X para el botón hamburguesa
 import { Users, FileText, DollarSign, Settings, Printer, Grid, LogOut, UserCircle, Menu, X } from 'lucide-react';
 
@@ -57,8 +58,8 @@ export default function Sidebar() {
   // Pantalla de carga (oculta en móvil para no romper diseño, visible en PC)
   if (cargando) return <aside className="hidden md:block w-64 bg-blue-900 min-h-screen"></aside>;
 
-  const esSuperAdmin = usuario?.email?.toLowerCase().includes('super');
-  const rolVisual = esSuperAdmin ? 'Superadmin' : 'Administrador';
+  const esAdminGlobal = esSuperAdmin(usuario?.email);
+  const rolVisual = esAdminGlobal ? 'Superadmin' : 'Administrador';
 
   return (
     <>
@@ -127,7 +128,7 @@ export default function Sidebar() {
         {/* --- SECCIÓN DE PERFIL Y CIERRE DE SESIÓN --- */}
         <div className="mt-8 pt-4 border-t border-blue-800 shrink-0">
           
-          {esSuperAdmin && (
+          {esAdminGlobal && (
             <Link onClick={() => setIsOpen(false)} href="/configuracion" className={`flex items-center gap-3 p-3 mb-2 rounded-lg transition-colors ${pathname === '/configuracion' ? 'bg-gray-800 text-white' : 'text-blue-200 hover:bg-gray-800 hover:text-white'}`}>
               <Settings size={20} /> Configuración
             </Link>
@@ -140,7 +141,7 @@ export default function Sidebar() {
                 <p className="text-sm font-bold text-white truncate" title={usuario.email}>
                   {usuario.email}
                 </p>
-                <p className={`text-xs font-semibold ${esSuperAdmin ? 'text-amber-400' : 'text-blue-300'}`}>
+                <p className={`text-xs font-semibold ${esAdminGlobal ? 'text-amber-400' : 'text-blue-300'}`}>
                   {rolVisual}
                 </p>
               </div>
