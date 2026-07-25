@@ -38,7 +38,8 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Una factura = una hoja carta, con margen chico para maximizar el espacio útil */
+/* Impresión Masiva agrupa 2 facturas por hoja carta; la factura individual
+   sigue usando 1 hoja. Margen chico para maximizar el espacio útil. */
 @page {
   size: letter portrait;
   margin: 10mm;
