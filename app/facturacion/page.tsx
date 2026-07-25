@@ -1,19 +1,59 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { esSuperAdmin } from '@/lib/auth';
 import { FileText, CheckCircle } from 'lucide-react';
+
+const NOMBRES_MES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+// Genera las últimas `cantidad` opciones de mes/año, empezando por el mes actual.
+function generarOpcionesMes(cantidad: number) {
+  const hoy = new Date();
+  const opciones = [];
+  for (let i = 0; i < cantidad; i++) {
+    const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    const mes = fecha.getMonth() + 1;
+    const anio = fecha.getFullYear();
+    opciones.push({ mes, anio, label: `${NOMBRES_MES[mes - 1]} ${anio}` });
+  }
+  return opciones;
+}
 
 export default function Facturacion() {
   const [generando, setGenerando] = useState(false);
   const [mensaje, setMensaje] = useState('');
-  
-  const MES_ACTUAL = new Date().getMonth() + 1; // 1 = Enero, 3 = Marzo
-  const ANIO_ACTUAL = new Date().getFullYear();
+  const [esAdminGlobal, setEsAdminGlobal] = useState(false);
+
+  const MES_ACTUAL_HOY = new Date().getMonth() + 1; // 1 = Enero, 3 = Marzo
+  const ANIO_ACTUAL_HOY = new Date().getFullYear();
+
+  // El superadmin puede regenerar hasta 2 meses atrás (mes actual, -1, -2).
+  const opcionesMes = generarOpcionesMes(3);
+
+  const [periodoSeleccionado, setPeriodoSeleccionado] = useState(
+    `${MES_ACTUAL_HOY}-${ANIO_ACTUAL_HOY}`
+  );
+
+  useEffect(() => {
+    const verificarRol = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setEsAdminGlobal(esSuperAdmin(session?.user.email));
+    };
+    verificarRol();
+  }, []);
+
+  // Si el usuario pierde el permiso de superadmin (o nunca lo tuvo), forzamos el mes actual.
+  const [MES_ACTUAL, ANIO_ACTUAL] = esAdminGlobal
+    ? periodoSeleccionado.split('-').map(Number)
+    : [MES_ACTUAL_HOY, ANIO_ACTUAL_HOY];
 
   const generarFacturacionMasiva = async () => {
     if (!confirm(`¿Estás seguro de generar la facturación para el mes ${MES_ACTUAL}/${ANIO_ACTUAL}?`)) return;
-    
+
     setGenerando(true);
     setMensaje('Obteniendo configuración de tarifas...');
 
@@ -130,9 +170,33 @@ export default function Facturacion() {
         </div>
         
         <h3 className="text-2xl font-extrabold text-gray-900 mb-2">Período de Facturación</h3>
-        <p className="text-gray-600 font-medium mb-8">
-          Mes: <strong className="text-gray-900">{MES_ACTUAL}</strong> | Año: <strong className="text-gray-900">{ANIO_ACTUAL}</strong>
-        </p>
+
+        {esAdminGlobal ? (
+          <div className="mb-8 text-left max-w-xs mx-auto">
+            <label htmlFor="periodo" className="block text-sm font-bold text-gray-700 mb-1">
+              Período a generar (superadmin)
+            </label>
+            <select
+              id="periodo"
+              value={periodoSeleccionado}
+              onChange={(e) => setPeriodoSeleccionado(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-2 font-medium text-gray-900"
+            >
+              {opcionesMes.map((op) => (
+                <option key={`${op.mes}-${op.anio}`} value={`${op.mes}-${op.anio}`}>
+                  {op.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Como superadmin puedes generar el mes actual o hasta 2 meses anteriores.
+            </p>
+          </div>
+        ) : (
+          <p className="text-gray-600 font-medium mb-8">
+            Mes: <strong className="text-gray-900">{MES_ACTUAL}</strong> | Año: <strong className="text-gray-900">{ANIO_ACTUAL}</strong>
+          </p>
+        )}
 
         <div className="bg-blue-50 text-blue-900 p-4 rounded-lg mb-8 text-left text-sm font-medium border border-blue-100">
           <strong className="text-blue-950 block mb-2 text-base">¿Qué hace este proceso?</strong>
