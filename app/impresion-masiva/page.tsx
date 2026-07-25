@@ -28,7 +28,7 @@ export default function ImpresionMasiva() {
     // (solo las columnas que se muestran, para que la respuesta pese menos)
     const { data } = await supabase
       .from('facturas')
-      .select(`id, mes, anio, monto, estado, suscriptor:suscriptor_id (nombre, apellido, nuid, direccion)`)
+      .select(`id, numero_factura, mes, anio, monto, estado, suscriptor:suscriptor_id (nombre, apellido, nuid, direccion)`)
       .eq('mes', mes)
       .eq('anio', anio);
 
@@ -93,7 +93,7 @@ export default function ImpresionMasiva() {
               </div>
               <div className="text-right bg-blue-50 p-2 rounded-lg border border-blue-100">
                 <h2 className="text-sm font-bold text-blue-900 uppercase">Factura de Venta</h2>
-                <p className="text-gray-800 font-mono mt-1 text-sm">N° {fac.id.substring(0, 6).toUpperCase()}</p>
+                <p className="text-gray-800 font-mono mt-1 text-sm">N° {fac.numero_factura}</p>
               </div>
             </div>
 
@@ -162,7 +162,7 @@ export default function ImpresionMasiva() {
                 </div>
                 <div className="text-right">
                   <p className="text-gray-500 text-[10px] font-bold uppercase">N° Factura:</p>
-                  <p className="font-mono font-bold text-gray-900">#{fac.id.substring(0, 6).toUpperCase()}</p>
+                  <p className="font-mono font-bold text-gray-900">#{fac.numero_factura}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-[10px] font-bold uppercase">Estado:</p>

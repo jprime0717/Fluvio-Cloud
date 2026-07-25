@@ -15,7 +15,7 @@ export default function ListaFacturas() {
       const { data, error } = await supabase
         .from('facturas')
         .select(`
-          id, mes, anio, monto, estado,
+          id, numero_factura, mes, anio, monto, estado,
           suscriptor:suscriptor_id (nombre, apellido, nuid)
         `)
         .order('anio', { ascending: false })
@@ -43,6 +43,7 @@ export default function ListaFacturas() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-800 text-white text-sm">
+                <th className="p-4">N° Factura</th>
                 <th className="p-4">Suscriptor</th>
                 <th className="p-4">NUID</th>
                 <th className="p-4 text-center">Período</th>
@@ -54,6 +55,7 @@ export default function ListaFacturas() {
             <tbody>
               {facturas.map((fac) => (
                 <tr key={fac.id} className="border-b hover:bg-gray-50 transition-colors">
+                  <td className="p-4 font-mono font-bold text-gray-800">{fac.numero_factura}</td>
                   <td className="p-4 font-medium text-gray-800">{fac.suscriptor?.nombre} {fac.suscriptor?.apellido}</td>
                   <td className="p-4 text-gray-600">{fac.suscriptor?.nuid}</td>
                   <td className="p-4 text-center text-gray-600">{fac.mes} / {fac.anio}</td>
@@ -76,7 +78,7 @@ export default function ListaFacturas() {
               ))}
               {facturas.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">No hay facturas generadas aún.</td>
+                  <td colSpan={7} className="p-8 text-center text-gray-500">No hay facturas generadas aún.</td>
                 </tr>
               )}
             </tbody>

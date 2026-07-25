@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Printer, ArrowLeft, MessageCircle, Scissors } from 'lucide-react';
+import { Printer, ArrowLeft, MessageCircle, Scissors, Pencil, Save, X } from 'lucide-react';
 import Link from 'next/link';
 
 export default function FacturaPDF() {
   const params = useParams();
   const facturaId = params.id;
-  
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [datos, setDatos] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,43 +18,101 @@ export default function FacturaPDF() {
   const [mesesMora, setMesesMora] = useState<number>(0);
   const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
-    const cargarDatos = async () => {
-      // 1. Cargamos la configuración global (Logo, NIT, etc.)
-      const { data: configData } = await supabase.from('acueductos').select('*').limit(1).single();
-      if (configData) setConfig(configData);
+  const [editando, setEditando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [mensajeEdit, setMensajeEdit] = useState('');
+  const [edicion, setEdicion] = useState({ nombre: '', apellido: '', monto: '' });
 
-      // 2. Cargamos la factura actual y el suscriptor
-      const { data: facturaData } = await supabase
+  const cargarDatos = async () => {
+    // 1. Cargamos la configuración global (Logo, NIT, etc.)
+    const { data: configData } = await supabase.from('acueductos').select('*').limit(1).single();
+    if (configData) setConfig(configData);
+
+    // 2. Cargamos la factura actual y el suscriptor
+    const { data: facturaData } = await supabase
+      .from('facturas')
+      .select(`*, suscriptor:suscriptor_id (id, nombre, apellido, documento, nuid, numero_medidor, direccion, tipo_suscriptor)`)
+      .eq('id', facturaId)
+      .single();
+
+    if (facturaData) {
+      setDatos(facturaData);
+
+      // 3. Magia: Calculamos la mora (Buscamos todas las facturas pendientes de esta persona)
+      const { data: pendientes } = await supabase
         .from('facturas')
-        .select(`*, suscriptor:suscriptor_id (id, nombre, apellido, documento, nuid, numero_medidor, direccion, tipo_suscriptor)`)
-        .eq('id', facturaId)
-        .single();
+        .select('monto')
+        .eq('suscriptor_id', facturaData.suscriptor.id)
+        .eq('estado', 'Pendiente');
 
-      if (facturaData) {
-        setDatos(facturaData);
-
-        // 3. Magia: Calculamos la mora (Buscamos todas las facturas pendientes de esta persona)
-        const { data: pendientes } = await supabase
-          .from('facturas')
-          .select('monto')
-          .eq('suscriptor_id', facturaData.suscriptor.id)
-          .eq('estado', 'Pendiente');
-
-        if (pendientes) {
-          setMesesMora(pendientes.length);
-          const total = pendientes.reduce((acc, curr) => acc + Number(curr.monto), 0);
-          setDeudaTotal(total);
-        }
+      if (pendientes) {
+        setMesesMora(pendientes.length);
+        const total = pendientes.reduce((acc, curr) => acc + Number(curr.monto), 0);
+        setDeudaTotal(total);
       }
-      setCargando(false);
-    };
+    }
+    setCargando(false);
+  };
 
+  useEffect(() => {
     cargarDatos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facturaId]);
 
   const imprimirPDF = () => {
     window.print();
+  };
+
+  const iniciarEdicion = () => {
+    setEdicion({
+      nombre: datos.suscriptor.nombre || '',
+      apellido: datos.suscriptor.apellido || '',
+      monto: String(datos.monto),
+    });
+    setMensajeEdit('');
+    setEditando(true);
+  };
+
+  const cancelarEdicion = () => {
+    setEditando(false);
+    setMensajeEdit('');
+  };
+
+  const guardarEdicion = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const montoNumerico = Number(edicion.monto);
+    if (!edicion.nombre.trim() || !edicion.apellido.trim()) {
+      setMensajeEdit('Error: el nombre y el apellido no pueden estar vacíos.');
+      return;
+    }
+    if (!Number.isFinite(montoNumerico) || montoNumerico < 0) {
+      setMensajeEdit('Error: el valor a cobrar debe ser un número válido mayor o igual a 0.');
+      return;
+    }
+
+    setGuardando(true);
+    setMensajeEdit('');
+
+    const { error: errSus } = await supabase
+      .from('suscriptores')
+      .update({ nombre: edicion.nombre.trim(), apellido: edicion.apellido.trim() })
+      .eq('id', datos.suscriptor.id);
+
+    const { error: errFac } = await supabase
+      .from('facturas')
+      .update({ monto: montoNumerico })
+      .eq('id', facturaId);
+
+    if (errSus || errFac) {
+      setMensajeEdit('Error al guardar: ' + (errSus?.message || errFac?.message));
+      setGuardando(false);
+      return;
+    }
+
+    await cargarDatos();
+    setGuardando(false);
+    setEditando(false);
   };
 
   const enviarWhatsApp = () => {
@@ -80,6 +138,11 @@ export default function FacturaPDF() {
           <ArrowLeft size={20} /> Volver
         </Link>
         <div className="flex gap-3">
+          {!editando && (
+            <button onClick={iniciarEdicion} className="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded shadow hover:bg-gray-50 font-bold transition-colors">
+              <Pencil size={20} /> Editar
+            </button>
+          )}
           <button onClick={enviarWhatsApp} className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded shadow hover:bg-green-600 font-bold transition-colors">
             <MessageCircle size={20} /> Enviar por WhatsApp
           </button>
@@ -88,6 +151,59 @@ export default function FacturaPDF() {
           </button>
         </div>
       </div>
+
+      {/* Formulario de edición (no se imprime) */}
+      {editando && (
+        <form onSubmit={guardarEdicion} className="w-full max-w-2xl bg-white rounded shadow-xl p-6 mb-6 print:hidden border-t-4 border-yellow-500">
+          <h3 className="text-lg font-extrabold text-gray-800 mb-4">Corregir datos antes de imprimir</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Nombre</label>
+              <input
+                type="text"
+                value={edicion.nombre}
+                onChange={(e) => setEdicion({ ...edicion, nombre: e.target.value })}
+                className="w-full border border-gray-300 rounded p-2 text-gray-900"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Apellido</label>
+              <input
+                type="text"
+                value={edicion.apellido}
+                onChange={(e) => setEdicion({ ...edicion, apellido: e.target.value })}
+                className="w-full border border-gray-300 rounded p-2 text-gray-900"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Valor a cobrar</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={edicion.monto}
+                onChange={(e) => setEdicion({ ...edicion, monto: e.target.value })}
+                className="w-full border border-gray-300 rounded p-2 text-gray-900"
+              />
+            </div>
+          </div>
+
+          {mensajeEdit && (
+            <p className={`mb-4 font-bold ${mensajeEdit.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
+              {mensajeEdit}
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <button type="submit" disabled={guardando} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 disabled:bg-blue-400 font-bold transition-colors">
+              <Save size={18} /> {guardando ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+            <button type="button" onClick={cancelarEdicion} disabled={guardando} className="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded shadow hover:bg-gray-50 font-bold transition-colors">
+              <X size={18} /> Cancelar
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Papel de la Factura */}
       <div className="bg-white w-full max-w-2xl p-10 rounded shadow-xl print:shadow-none print:p-0 relative overflow-hidden">
@@ -116,7 +232,7 @@ export default function FacturaPDF() {
           </div>
           <div className="text-right bg-blue-50 p-3 rounded-lg border border-blue-100">
             <h2 className="text-xl font-bold text-blue-900 uppercase">Factura de Venta</h2>
-            <p className="text-gray-800 font-mono mt-1 text-lg font-bold">N° {datos.id.substring(0, 6).toUpperCase()}</p>
+            <p className="text-gray-800 font-mono mt-1 text-lg font-bold">N° {datos.numero_factura}</p>
             <p className="text-gray-600 text-sm mt-1 font-bold">Emisión: {new Date(datos.fecha_emision).toLocaleDateString()}</p>
             <p className="text-gray-600 text-sm font-bold">Período: Mes {datos.mes} / {datos.anio}</p>
           </div>
@@ -255,7 +371,7 @@ export default function FacturaPDF() {
             
             <div className="text-right">
               <p className="text-gray-500 text-xs font-bold uppercase">N° Factura:</p>
-              <p className="font-mono font-bold text-gray-900">#{datos.id.substring(0, 6).toUpperCase()}</p>
+              <p className="font-mono font-bold text-gray-900">#{datos.numero_factura}</p>
             </div>
 
             <div>
