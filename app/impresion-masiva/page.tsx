@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { totalFactura } from '@/lib/facturas';
 import { Printer, Search, Scissors } from 'lucide-react';
 
 export default function ImpresionMasiva() {
@@ -28,7 +29,7 @@ export default function ImpresionMasiva() {
     // (solo las columnas que se muestran, para que la respuesta pese menos)
     const { data } = await supabase
       .from('facturas')
-      .select(`id, numero_factura, mes, anio, monto, estado, suscriptor:suscriptor_id (nombre, apellido, nuid, direccion)`)
+      .select(`id, numero_factura, mes, anio, monto, reconexion, interes_mora, multa, estado, suscriptor:suscriptor_id (nombre, apellido, nuid, direccion)`)
       .eq('mes', mes)
       .eq('anio', anio);
 
@@ -47,7 +48,7 @@ export default function ImpresionMasiva() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-200 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-200 p-4 md:p-8 print:p-0">
 
       {/* Controles de Búsqueda (Se ocultan al imprimir gracias a print:hidden) */}
       <div className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-8 max-w-4xl mx-auto print:hidden">
@@ -122,8 +123,8 @@ export default function ImpresionMasiva() {
 
                   <div className="mb-2 bg-gray-50 p-2 rounded border border-gray-200">
                     <h3 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Facturar a:</h3>
-                    <p className="text-sm font-bold text-gray-800">{fac.suscriptor.nombre} {fac.suscriptor.apellido}</p>
-                    <p className="text-gray-600 text-[10px]">NUID: {fac.suscriptor.nuid} | Predio: {fac.suscriptor.direccion}</p>
+                    <p className="text-sm font-bold text-gray-800 truncate">{fac.suscriptor.nombre} {fac.suscriptor.apellido}</p>
+                    <p className="text-gray-600 text-[10px] truncate">NUID: {fac.suscriptor.nuid} | Predio: {fac.suscriptor.direccion}</p>
                   </div>
 
                   <table className="w-full text-left mb-2 border-collapse">
@@ -140,6 +141,27 @@ export default function ImpresionMasiva() {
                         <td className="p-1.5 text-center text-gray-600">Mes {fac.mes} / {fac.anio}</td>
                         <td className="p-1.5 text-right text-gray-800">${Number(fac.monto).toLocaleString('es-CO')}</td>
                       </tr>
+                      {Number(fac.reconexion) > 0 && (
+                        <tr className="border-b">
+                          <td className="p-1.5 text-gray-800">Reconexión</td>
+                          <td className="p-1.5 text-center text-gray-600">Mes {fac.mes} / {fac.anio}</td>
+                          <td className="p-1.5 text-right text-gray-800">${Number(fac.reconexion).toLocaleString('es-CO')}</td>
+                        </tr>
+                      )}
+                      {Number(fac.interes_mora) > 0 && (
+                        <tr className="border-b">
+                          <td className="p-1.5 text-gray-800">Intereses de Mora</td>
+                          <td className="p-1.5 text-center text-gray-600">Mes {fac.mes} / {fac.anio}</td>
+                          <td className="p-1.5 text-right text-gray-800">${Number(fac.interes_mora).toLocaleString('es-CO')}</td>
+                        </tr>
+                      )}
+                      {Number(fac.multa) > 0 && (
+                        <tr className="border-b">
+                          <td className="p-1.5 text-gray-800">Multa</td>
+                          <td className="p-1.5 text-center text-gray-600">Mes {fac.mes} / {fac.anio}</td>
+                          <td className="p-1.5 text-right text-gray-800">${Number(fac.multa).toLocaleString('es-CO')}</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
 
@@ -148,7 +170,7 @@ export default function ImpresionMasiva() {
                       <div className="flex justify-between font-black text-base text-gray-800">
                         <span>TOTAL:</span>
                         <span className={fac.estado === 'Pagado' ? 'text-green-600' : 'text-red-600'}>
-                          ${Number(fac.monto).toLocaleString('es-CO')}
+                          ${totalFactura(fac).toLocaleString('es-CO')}
                         </span>
                       </div>
                     </div>
@@ -180,8 +202,8 @@ export default function ImpresionMasiva() {
                     <div className="grid grid-cols-2 gap-2 text-[10px]">
                       <div>
                         <p className="text-gray-500 font-bold uppercase">Suscriptor:</p>
-                        <p className="font-extrabold text-gray-900">{fac.suscriptor.nombre} {fac.suscriptor.apellido}</p>
-                        <p className="text-gray-600 font-bold mt-0.5">NUID: {fac.suscriptor.nuid || 'N/A'}</p>
+                        <p className="font-extrabold text-gray-900 truncate">{fac.suscriptor.nombre} {fac.suscriptor.apellido}</p>
+                        <p className="text-gray-600 font-bold mt-0.5 truncate">NUID: {fac.suscriptor.nuid || 'N/A'}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-gray-500 font-bold uppercase">N° Factura:</p>
@@ -193,7 +215,7 @@ export default function ImpresionMasiva() {
                       </div>
                       <div className="text-right">
                         <p className="text-gray-500 font-bold uppercase">Total a Pagar:</p>
-                        <p className="font-black text-sm text-blue-700 print:text-black">${Number(fac.monto).toLocaleString('es-CO')}</p>
+                        <p className="font-black text-sm text-blue-700 print:text-black">${totalFactura(fac).toLocaleString('es-CO')}</p>
                       </div>
                     </div>
                   </div>
