@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { totalFactura } from '@/lib/facturas';
 import Link from 'next/link';
 import { Eye, FileText } from 'lucide-react';
 
@@ -15,7 +16,7 @@ export default function ListaFacturas() {
       const { data, error } = await supabase
         .from('facturas')
         .select(`
-          id, numero_factura, mes, anio, monto, estado,
+          id, numero_factura, mes, anio, monto, reconexion, interes_mora, multa, estado,
           suscriptor:suscriptor_id (nombre, apellido, nuid)
         `)
         .order('anio', { ascending: false })
@@ -59,7 +60,7 @@ export default function ListaFacturas() {
                   <td className="p-4 font-medium text-gray-800">{fac.suscriptor?.nombre} {fac.suscriptor?.apellido}</td>
                   <td className="p-4 text-gray-600">{fac.suscriptor?.nuid}</td>
                   <td className="p-4 text-center text-gray-600">{fac.mes} / {fac.anio}</td>
-                  <td className="p-4 text-right font-bold text-gray-800">${Number(fac.monto).toLocaleString('es-CO')}</td>
+                  <td className="p-4 text-right font-bold text-gray-800">${totalFactura(fac).toLocaleString('es-CO')}</td>
                   <td className="p-4 text-center">
                     <span className={`px-3 py-1 rounded text-xs font-bold ${fac.estado === 'Pagado' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {fac.estado}

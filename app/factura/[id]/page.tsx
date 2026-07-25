@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { totalFactura } from '@/lib/facturas';
 import { Printer, ArrowLeft, MessageCircle, Scissors, Pencil, Save, X } from 'lucide-react';
 import Link from 'next/link';
 
@@ -21,7 +22,7 @@ export default function FacturaPDF() {
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [mensajeEdit, setMensajeEdit] = useState('');
-  const [edicion, setEdicion] = useState({ nombre: '', apellido: '', monto: '' });
+  const [edicion, setEdicion] = useState({ nombre: '', apellido: '', monto: '', reconexion: '', interesMora: '', multa: '' });
 
   const cargarDatos = async () => {
     // 1. Cargamos la configuración global (Logo, NIT, etc.)
@@ -41,13 +42,13 @@ export default function FacturaPDF() {
       // 3. Magia: Calculamos la mora (Buscamos todas las facturas pendientes de esta persona)
       const { data: pendientes } = await supabase
         .from('facturas')
-        .select('monto')
+        .select('monto, reconexion, interes_mora, multa')
         .eq('suscriptor_id', facturaData.suscriptor.id)
         .eq('estado', 'Pendiente');
 
       if (pendientes) {
         setMesesMora(pendientes.length);
-        const total = pendientes.reduce((acc, curr) => acc + Number(curr.monto), 0);
+        const total = pendientes.reduce((acc, curr) => acc + totalFactura(curr), 0);
         setDeudaTotal(total);
       }
     }
@@ -68,6 +69,9 @@ export default function FacturaPDF() {
       nombre: datos.suscriptor.nombre || '',
       apellido: datos.suscriptor.apellido || '',
       monto: String(datos.monto),
+      reconexion: String(datos.reconexion || 0),
+      interesMora: String(datos.interes_mora || 0),
+      multa: String(datos.multa || 0),
     });
     setMensajeEdit('');
     setEditando(true);
@@ -82,12 +86,17 @@ export default function FacturaPDF() {
     e.preventDefault();
 
     const montoNumerico = Number(edicion.monto);
+    const reconexionNumerica = Number(edicion.reconexion);
+    const interesMoraNumerico = Number(edicion.interesMora);
+    const multaNumerica = Number(edicion.multa);
+
     if (!edicion.nombre.trim() || !edicion.apellido.trim()) {
       setMensajeEdit('Error: el nombre y el apellido no pueden estar vacíos.');
       return;
     }
-    if (!Number.isFinite(montoNumerico) || montoNumerico < 0) {
-      setMensajeEdit('Error: el valor a cobrar debe ser un número válido mayor o igual a 0.');
+    const valores = [montoNumerico, reconexionNumerica, interesMoraNumerico, multaNumerica];
+    if (valores.some((v) => !Number.isFinite(v) || v < 0)) {
+      setMensajeEdit('Error: los valores deben ser números válidos mayores o iguales a 0.');
       return;
     }
 
@@ -101,7 +110,12 @@ export default function FacturaPDF() {
 
     const { error: errFac } = await supabase
       .from('facturas')
-      .update({ monto: montoNumerico })
+      .update({
+        monto: montoNumerico,
+        reconexion: reconexionNumerica,
+        interes_mora: interesMoraNumerico,
+        multa: multaNumerica,
+      })
       .eq('id', facturaId);
 
     if (errSus || errFac) {
@@ -117,17 +131,22 @@ export default function FacturaPDF() {
 
   const enviarWhatsApp = () => {
     const urlFactura = window.location.href;
-    const montoMostrar = datos.estado === 'Pendiente' ? deudaTotal : datos.monto;
-    
+    const montoMostrar = datos.estado === 'Pendiente' ? deudaTotal : totalFactura(datos);
+
     const mensaje = `Hola ${datos.suscriptor.nombre} ${datos.suscriptor.apellido}, te compartimos tu factura del ${config?.nombre || 'Acueducto'}. Total a pagar: $${montoMostrar.toLocaleString('es-CO')}. Puedes verla y descargarla aquí: ${urlFactura}`;
-    
+
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
   };
 
   if (cargando) return <div className="p-8 text-center text-gray-500 font-bold">Generando documento...</div>;
   if (!datos || !config) return <div className="p-8 text-center text-red-500 font-bold">Error al cargar la factura o la configuración</div>;
 
-  const totalMostrar = datos.estado === 'Pagado' ? Number(datos.monto) : deudaTotal;
+  const totalFacturaActual = totalFactura(datos);
+  const totalMostrar = datos.estado === 'Pagado' ? totalFacturaActual : deudaTotal;
+  const totalEdicion = ['monto', 'reconexion', 'interesMora', 'multa'].reduce(
+    (acc, campo) => acc + (Number(edicion[campo as keyof typeof edicion]) || 0),
+    0
+  );
 
   return (
     <div className="min-h-screen bg-gray-200 p-8 flex flex-col items-center">
@@ -176,7 +195,7 @@ export default function FacturaPDF() {
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Valor a cobrar</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Tarifa de Acueducto</label>
               <input
                 type="number"
                 min="0"
@@ -187,6 +206,46 @@ export default function FacturaPDF() {
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Reconexión</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={edicion.reconexion}
+                onChange={(e) => setEdicion({ ...edicion, reconexion: e.target.value })}
+                className="w-full border border-gray-300 rounded p-2 text-gray-900"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Intereses de Mora</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={edicion.interesMora}
+                onChange={(e) => setEdicion({ ...edicion, interesMora: e.target.value })}
+                className="w-full border border-gray-300 rounded p-2 text-gray-900"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Multa</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={edicion.multa}
+                onChange={(e) => setEdicion({ ...edicion, multa: e.target.value })}
+                className="w-full border border-gray-300 rounded p-2 text-gray-900"
+              />
+            </div>
+          </div>
+
+          <p className="text-right font-bold text-gray-700 mb-4">
+            Total de esta factura: <span className="text-blue-700 text-lg">${totalEdicion.toLocaleString('es-CO')}</span>
+          </p>
 
           {mensajeEdit && (
             <p className={`mb-4 font-bold ${mensajeEdit.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
@@ -295,10 +354,31 @@ export default function FacturaPDF() {
               <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
               <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.monto).toLocaleString('es-CO')}</td>
             </tr>
+            {Number(datos.reconexion) > 0 && (
+              <tr className="border-b border-gray-200">
+                <td className="p-4 text-gray-800 font-bold">Reconexión</td>
+                <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
+                <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.reconexion).toLocaleString('es-CO')}</td>
+              </tr>
+            )}
+            {Number(datos.interes_mora) > 0 && (
+              <tr className="border-b border-gray-200">
+                <td className="p-4 text-gray-800 font-bold">Intereses de Mora</td>
+                <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
+                <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.interes_mora).toLocaleString('es-CO')}</td>
+              </tr>
+            )}
+            {Number(datos.multa) > 0 && (
+              <tr className="border-b border-gray-200">
+                <td className="p-4 text-gray-800 font-bold">Multa</td>
+                <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
+                <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.multa).toLocaleString('es-CO')}</td>
+              </tr>
+            )}
             {datos.estado === 'Pendiente' && mesesMora > 1 && (
               <tr className="border-b border-gray-200 bg-gray-50">
                 <td colSpan={2} className="p-4 text-gray-800 font-bold italic">Saldos anteriores pendientes ({mesesMora - 1} meses)</td>
-                <td className="p-4 text-right text-gray-900 font-bold">${(deudaTotal - Number(datos.monto)).toLocaleString('es-CO')}</td>
+                <td className="p-4 text-right text-gray-900 font-bold">${(deudaTotal - totalFacturaActual).toLocaleString('es-CO')}</td>
               </tr>
             )}
           </tbody>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { totalFactura } from '@/lib/facturas';
 import { Users, FileText, DollarSign, Clock, TrendingUp } from 'lucide-react';
 
 export default function ResumenDashboard() {
@@ -39,7 +40,7 @@ export default function ResumenDashboard() {
         // 2. Consulta Real: Obtener todas las facturas del MES ACTUAL
         const { data: facturasMes, error: errFacs } = await supabase
           .from('facturas')
-          .select('monto, estado')
+          .select('monto, reconexion, interes_mora, multa, estado')
           .eq('mes', numeroMes)
           .eq('anio', anioActual);
 
@@ -51,7 +52,7 @@ export default function ResumenDashboard() {
         // 3. Magia: Calculamos los totales usando reduce()
         if (facturasMes) {
           const totales = facturasMes.reduce((acc, fac) => {
-            const monto = Number(fac.monto);
+            const monto = totalFactura(fac);
             acc.facturado += monto;
             if (fac.estado === 'Pagado') acc.pagado += monto;
             if (fac.estado === 'Pendiente') acc.pendiente += monto;

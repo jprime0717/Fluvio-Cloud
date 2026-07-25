@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { totalFactura } from '@/lib/facturas';
 import { Search, CheckCircle, DollarSign } from 'lucide-react';
 
 export default function Recaudo() {
@@ -144,7 +145,7 @@ export default function Recaudo() {
               <div key={fac.id} className="flex justify-between items-center p-6 border-b hover:bg-gray-50">
                 <div>
                   <p className="font-extrabold text-gray-800 text-lg">Período: Mes {fac.mes} / Año {fac.anio}</p>
-                  <p className="text-gray-600 font-medium mt-1">Total a pagar: <strong className="text-red-600 text-xl">${Number(fac.monto).toLocaleString('es-CO')}</strong></p>
+                  <p className="text-gray-600 font-medium mt-1">Total a pagar: <strong className="text-red-600 text-xl">${totalFactura(fac).toLocaleString('es-CO')}</strong></p>
                 </div>
                 <button
                   onClick={() => registrarPago(fac.id)}
