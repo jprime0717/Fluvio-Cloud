@@ -12,7 +12,7 @@ export default function Recaudo() {
   const [buscando, setBuscando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
-  // 1. Buscar facturas pendientes por documento o medidor
+  // 1. Buscar facturas pendientes por NUID o medidor
   const buscarFacturas = async (e: React.FormEvent) => {
     e.preventDefault();
     setBuscando(true);
@@ -32,18 +32,18 @@ export default function Recaudo() {
     // cualquiera al azar.
     const { data: suscriptores } = await supabase
       .from('suscriptores')
-      .select('id, nombre, apellido, documento, nuid, numero_medidor')
-      .or(`documento.eq.${termino},numero_medidor.eq.${termino},nuid.eq.${termino}`)
+      .select('id, nombre, apellido, nuid, numero_medidor')
+      .or(`numero_medidor.eq.${termino},nuid.eq.${termino}`)
       .limit(2);
 
     if (!suscriptores || suscriptores.length === 0) {
-      setMensaje('No se encontró ningún suscriptor con ese documento o número de medidor.');
+      setMensaje('No se encontró ningún suscriptor con ese NUID o número de medidor.');
       setBuscando(false);
       return;
     }
 
     if (suscriptores.length > 1) {
-      setMensaje('Ese término coincide con más de un suscriptor (por ejemplo, varios comparten el mismo texto de medidor). Busca por el NUID o el documento en su lugar.');
+      setMensaje('Ese término coincide con más de un suscriptor (por ejemplo, varios comparten el mismo texto de medidor). Busca por el NUID en su lugar.');
       setBuscando(false);
       return;
     }
@@ -101,7 +101,7 @@ export default function Recaudo() {
         <form onSubmit={buscarFacturas} className="flex gap-4 items-end">
           <div className="flex-1">
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              Buscar por Documento, NUID o Número de Medidor
+              Buscar por NUID o Número de Medidor
             </label>
             <input
               type="text"

@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { totalFactura } from '@/lib/facturas';
 import { Printer, Search, Scissors } from 'lucide-react';
+
+// Alto útil de una hoja carta con el margen definido en @page (globals.css:
+// letter portrait, margen 10mm). 96px = 1in por convención CSS, tanto en
+// pantalla como al imprimir.
+const ALTO_HOJA_PX = ((279.4 - 20) / 25.4) * 96;
 
 export default function ImpresionMasiva() {
   const [mes, setMes] = useState(new Date().getMonth() + 1);
@@ -11,6 +16,8 @@ export default function ImpresionMasiva() {
   const [facturas, setFacturas] = useState<any[]>([]);
   const [config, setConfig] = useState<any>(null);
   const [buscando, setBuscando] = useState(false);
+  const gruposRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const [escalas, setEscalas] = useState<Record<number, number>>({});
 
   useEffect(() => {
     // Cargamos los datos globales del acueducto (Logo, NIT, etc.)
@@ -29,7 +36,7 @@ export default function ImpresionMasiva() {
     // (solo las columnas que se muestran, para que la respuesta pese menos)
     const { data } = await supabase
       .from('facturas')
-      .select(`id, numero_factura, mes, anio, monto, reconexion, interes_mora, multa, estado, suscriptor:suscriptor_id (nombre, apellido, nuid, direccion)`)
+      .select(`id, numero_factura, mes, anio, monto, reconexion, interes_mora, multa, cobro_meses_anteriores, estado, suscriptor:suscriptor_id (nombre, apellido, nuid, direccion)`)
       .eq('mes', mes)
       .eq('anio', anio);
 
@@ -46,6 +53,22 @@ export default function ImpresionMasiva() {
   for (let i = 0; i < facturas.length; i += 2) {
     paginas.push(facturas.slice(i, i + 2));
   }
+
+  // Si un grupo de 2 facturas (con recargos: reconexión, mora, multa, cobro de
+  // meses anteriores) queda más alto que una hoja carta, lo encogemos justo lo
+  // necesario para que las 2 facturas sigan cabiendo en una sola hoja en vez de
+  // que la segunda se corra a una página aparte.
+  useLayoutEffect(() => {
+    const nuevasEscalas: Record<number, number> = {};
+    paginas.forEach((_, idx) => {
+      const el = gruposRefs.current[idx];
+      if (!el) return;
+      const alto = el.scrollHeight;
+      nuevasEscalas[idx] = alto > ALTO_HOJA_PX ? ALTO_HOJA_PX / alto : 1;
+    });
+    setEscalas(nuevasEscalas);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facturas]);
 
   return (
     <div className="min-h-screen bg-gray-200 p-4 md:p-8 print:p-0">
@@ -80,12 +103,24 @@ export default function ImpresionMasiva() {
           <p className="text-center text-gray-500 print:hidden">Selecciona un mes y año para cargar las facturas.</p>
         )}
 
-        {/* Agrupamos de a 2: cada grupo es una hoja carta completa al imprimir */}
-        {paginas.map((pagina, idxPagina) => (
+        {/* Agrupamos de a 2: cada grupo es una hoja carta completa al imprimir.
+            Si el grupo no cabe entero en una hoja (muchos recargos), el
+            useLayoutEffect de arriba lo encoge (escalas[idx] < 1) para que
+            las 2 facturas sigan compartiendo la misma hoja. */}
+        {paginas.map((pagina, idxPagina) => {
+          const escala = escalas[idxPagina] ?? 1;
+          const altoMedido = gruposRefs.current[idxPagina]?.scrollHeight;
+          return (
           <div
             key={idxPagina}
-            className={`space-y-6 print:space-y-3 ${idxPagina < paginas.length - 1 ? 'print:break-after-page' : ''}`}
+            className={idxPagina < paginas.length - 1 ? 'print:break-after-page' : ''}
+            style={escala < 1 && altoMedido ? { height: altoMedido * escala } : undefined}
           >
+            <div
+              ref={(el) => { gruposRefs.current[idxPagina] = el; }}
+              className="space-y-6 print:space-y-3"
+              style={escala < 1 ? { transform: `scale(${escala})`, transformOrigin: 'top left' } : undefined}
+            >
             {pagina.map((fac, idxFactura) => (
               <div key={fac.id}>
                 {/* Línea de corte entre las dos facturas de la misma hoja */}
@@ -162,6 +197,13 @@ export default function ImpresionMasiva() {
                           <td className="p-1.5 text-right text-gray-800">${Number(fac.multa).toLocaleString('es-CO')}</td>
                         </tr>
                       )}
+                      {Number(fac.cobro_meses_anteriores) > 0 && (
+                        <tr className="border-b">
+                          <td className="p-1.5 text-gray-800">Cobro Meses Anteriores</td>
+                          <td className="p-1.5 text-center text-gray-600">Mes {fac.mes} / {fac.anio}</td>
+                          <td className="p-1.5 text-right text-gray-800">${Number(fac.cobro_meses_anteriores).toLocaleString('es-CO')}</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
 
@@ -222,8 +264,10 @@ export default function ImpresionMasiva() {
                 </div>
               </div>
             ))}
+            </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

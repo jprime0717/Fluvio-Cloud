@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { totalFactura } from '@/lib/facturas';
+import { compararDirecciones } from '@/lib/direccion';
 import Link from 'next/link';
 import { Eye, FileText } from 'lucide-react';
 
@@ -13,16 +14,23 @@ export default function ListaFacturas() {
   useEffect(() => {
     const cargarFacturas = async () => {
       // Traemos las facturas y cruzamos los datos para saber el nombre y cédula del suscriptor
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('facturas')
         .select(`
           id, numero_factura, mes, anio, monto, reconexion, interes_mora, multa, estado,
-          suscriptor:suscriptor_id (nombre, apellido, nuid)
-        `)
-        .order('anio', { ascending: false })
-        .order('mes', { ascending: false });
+          suscriptor:suscriptor_id (nombre, apellido, nuid, direccion)
+        `);
 
-      if (data) setFacturas(data);
+      if (data) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ordenadas = [...data].sort((a: any, b: any) => {
+          const cmp = compararDirecciones(a.suscriptor?.direccion || '', b.suscriptor?.direccion || '');
+          if (cmp !== 0) return cmp;
+          if (a.anio !== b.anio) return b.anio - a.anio;
+          return b.mes - a.mes;
+        });
+        setFacturas(ordenadas);
+      }
       setCargando(false);
     };
 

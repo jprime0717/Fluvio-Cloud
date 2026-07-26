@@ -22,7 +22,7 @@ export default function FacturaPDF() {
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [mensajeEdit, setMensajeEdit] = useState('');
-  const [edicion, setEdicion] = useState({ nombre: '', apellido: '', monto: '', reconexion: '', interesMora: '', multa: '' });
+  const [edicion, setEdicion] = useState({ nombre: '', apellido: '', monto: '', reconexion: '', interesMora: '', multa: '', cobroMesesAnteriores: '' });
 
   const cargarDatos = async () => {
     // 1. Cargamos la configuración global (Logo, NIT, etc.)
@@ -32,7 +32,7 @@ export default function FacturaPDF() {
     // 2. Cargamos la factura actual y el suscriptor
     const { data: facturaData } = await supabase
       .from('facturas')
-      .select(`*, suscriptor:suscriptor_id (id, nombre, apellido, documento, nuid, numero_medidor, direccion, tipo_suscriptor)`)
+      .select(`*, suscriptor:suscriptor_id (id, nombre, apellido, nuid, numero_medidor, direccion, tipo_suscriptor)`)
       .eq('id', facturaId)
       .single();
 
@@ -72,6 +72,7 @@ export default function FacturaPDF() {
       reconexion: String(datos.reconexion || 0),
       interesMora: String(datos.interes_mora || 0),
       multa: String(datos.multa || 0),
+      cobroMesesAnteriores: String(datos.cobro_meses_anteriores || 0),
     });
     setMensajeEdit('');
     setEditando(true);
@@ -89,12 +90,13 @@ export default function FacturaPDF() {
     const reconexionNumerica = Number(edicion.reconexion);
     const interesMoraNumerico = Number(edicion.interesMora);
     const multaNumerica = Number(edicion.multa);
+    const cobroMesesAnterioresNumerico = Number(edicion.cobroMesesAnteriores);
 
     if (!edicion.nombre.trim() || !edicion.apellido.trim()) {
       setMensajeEdit('Error: el nombre y el apellido no pueden estar vacíos.');
       return;
     }
-    const valores = [montoNumerico, reconexionNumerica, interesMoraNumerico, multaNumerica];
+    const valores = [montoNumerico, reconexionNumerica, interesMoraNumerico, multaNumerica, cobroMesesAnterioresNumerico];
     if (valores.some((v) => !Number.isFinite(v) || v < 0)) {
       setMensajeEdit('Error: los valores deben ser números válidos mayores o iguales a 0.');
       return;
@@ -115,6 +117,7 @@ export default function FacturaPDF() {
         reconexion: reconexionNumerica,
         interes_mora: interesMoraNumerico,
         multa: multaNumerica,
+        cobro_meses_anteriores: cobroMesesAnterioresNumerico,
       })
       .eq('id', facturaId);
 
@@ -143,7 +146,7 @@ export default function FacturaPDF() {
 
   const totalFacturaActual = totalFactura(datos);
   const totalMostrar = datos.estado === 'Pagado' ? totalFacturaActual : deudaTotal;
-  const totalEdicion = ['monto', 'reconexion', 'interesMora', 'multa'].reduce(
+  const totalEdicion = ['monto', 'reconexion', 'interesMora', 'multa', 'cobroMesesAnteriores'].reduce(
     (acc, campo) => acc + (Number(edicion[campo as keyof typeof edicion]) || 0),
     0
   );
@@ -207,7 +210,7 @@ export default function FacturaPDF() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Reconexión</label>
               <input
@@ -238,6 +241,17 @@ export default function FacturaPDF() {
                 step="1"
                 value={edicion.multa}
                 onChange={(e) => setEdicion({ ...edicion, multa: e.target.value })}
+                className="w-full border border-gray-300 rounded p-2 text-gray-900"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Cobro Meses Anteriores</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={edicion.cobroMesesAnteriores}
+                onChange={(e) => setEdicion({ ...edicion, cobroMesesAnteriores: e.target.value })}
                 className="w-full border border-gray-300 rounded p-2 text-gray-900"
               />
             </div>
@@ -373,6 +387,13 @@ export default function FacturaPDF() {
                 <td className="p-4 text-gray-800 font-bold">Multa</td>
                 <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
                 <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.multa).toLocaleString('es-CO')}</td>
+              </tr>
+            )}
+            {Number(datos.cobro_meses_anteriores) > 0 && (
+              <tr className="border-b border-gray-200">
+                <td className="p-4 text-gray-800 font-bold">Cobro Meses Anteriores</td>
+                <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
+                <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.cobro_meses_anteriores).toLocaleString('es-CO')}</td>
               </tr>
             )}
             {datos.estado === 'Pendiente' && mesesMora > 1 && (

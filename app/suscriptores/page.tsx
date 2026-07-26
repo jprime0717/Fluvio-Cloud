@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { compararDirecciones } from '@/lib/direccion';
 
 interface Suscriptor {
   id: number;
   nombre: string;
   apellido: string;
-  documento: string;
   telefono: string;
   nuid: string;
   numero_medidor: string;
@@ -20,25 +20,28 @@ export default function Suscriptores() {
   const [suscriptores, setSuscriptores] = useState<Suscriptor[]>([]);
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
-  const [documento, setDocumento] = useState('');
   const [telefono, setTelefono] = useState('');
   const [nuid, setNuid] = useState('');
   const [numero_medidor, setNumeroMedidor] = useState('');
   const [direccion, setDireccion] = useState('');
   const [tipo, setTipo] = useState('Residencial');
-  
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+
   const [guardando, setGuardando] = useState(false);
   const [cargandoLista, setCargandoLista] = useState(true); // Ya inicia en true
+
+  const ordenarPorManzana = (lista: Suscriptor[]) => {
+    return [...lista].sort((a, b) => compararDirecciones(a.direccion, b.direccion));
+  };
 
   // Separamos la consulta para evitar el warning de ESLint
   const obtenerDatos = async () => {
     const { data, error } = await supabase
       .from('suscriptores')
-      .select('*')
-      .order('nombre', { ascending: true });
-    
+      .select('*');
+
     if (error) console.error("Error cargando suscriptores:", error.message);
-    else if (data) setSuscriptores(data as Suscriptor[]);
+    else if (data) setSuscriptores(ordenarPorManzana(data as Suscriptor[]));
   };
 
   useEffect(() => {
@@ -49,40 +52,76 @@ export default function Suscriptores() {
     init();
   }, []);
 
+  const limpiarFormulario = () => {
+    setNombre(''); setApellido(''); setTelefono(''); setNuid(''); setDireccion(''); setNumeroMedidor(''); setTipo('Residencial');
+    setEditandoId(null);
+  };
+
+  const editarSuscriptor = (sub: Suscriptor) => {
+    setEditandoId(sub.id);
+    setNombre(sub.nombre);
+    setApellido(sub.apellido);
+    setTelefono(sub.telefono || '');
+    setNuid(sub.nuid || '');
+    setNumeroMedidor(sub.numero_medidor || '');
+    setDireccion(sub.direccion);
+    setTipo(sub.tipo_suscriptor || 'Residencial');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const eliminarSuscriptor = async (sub: Suscriptor) => {
+    if (!confirm(`¿Estás seguro de eliminar a ${sub.nombre} ${sub.apellido}? Esta acción no se puede deshacer.`)) return;
+
+    const { error } = await supabase
+      .from('suscriptores')
+      .delete()
+      .eq('id', sub.id);
+
+    if (!error) {
+      if (editandoId === sub.id) limpiarFormulario();
+      await obtenerDatos();
+    } else {
+      alert('Error al eliminar: ' + error.message);
+    }
+  };
+
   const guardarSuscriptor = async (e: React.FormEvent) => {
     e.preventDefault();
     setGuardando(true);
 
-    const { error } = await supabase
-      .from('suscriptores')
-      .insert([{
-        nombre: nombre.trim(),
-        apellido: apellido.trim(),
-        documento: documento.trim(),
-        telefono: telefono.trim() || null,
-        nuid: nuid.trim() || null,
-        numero_medidor: numero_medidor.trim(),
-        direccion: direccion.trim(),
-        tipo_suscriptor: tipo
-      }]);
+    const payload = {
+      nombre: nombre.trim(),
+      apellido: apellido.trim(),
+      telefono: telefono.trim() || null,
+      nuid: nuid.trim() || null,
+      numero_medidor: numero_medidor.trim(),
+      direccion: direccion.trim(),
+      tipo_suscriptor: tipo
+    };
+
+    const { error } = editandoId
+      ? await supabase.from('suscriptores').update(payload).eq('id', editandoId)
+      : await supabase.from('suscriptores').insert([payload]);
 
     if (!error) {
-      setNombre(''); setApellido(''); setDocumento(''); setTelefono(''); setNuid(''); setDireccion(''); setNumeroMedidor(''); setTipo('Residencial');
+      limpiarFormulario();
       await obtenerDatos(); // Recargamos silenciosamente sin mostrar el spinner
     } else {
       alert('Error al guardar: ' + error.message);
     }
-    
+
     setGuardando(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-8">
-        
+      <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 lg:gap-8 items-start">
+
         {/* Formulario */}
-        <div className="w-full md:w-1/3 bg-white p-6 rounded-lg shadow-md h-fit border border-gray-200">
-          <h2 className="text-xl font-extrabold text-gray-900 mb-5">Nuevo Suscriptor</h2>
+        <div className="w-full bg-white p-6 rounded-lg shadow-md h-fit border border-gray-200 lg:sticky lg:top-8">
+          <h2 className="text-xl font-extrabold text-gray-900 mb-5">
+            {editandoId ? 'Editar Suscriptor' : 'Nuevo Suscriptor'}
+          </h2>
           <form onSubmit={guardarSuscriptor} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1">Nombre</label>
@@ -117,15 +156,6 @@ export default function Suscriptores() {
                 placeholder="Ej: A-001"
               />
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1">Documento / Cédula</label>
-              <input
-                type="text" required value={documento} onChange={(e) => setDocumento(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white text-black font-medium"
-                style={{ color: '#000000' }}
-              />
-            </div>
-
             {/* CAMPO VISUAL DEL MEDIDOR */}
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1">Número de Medidor (Opcional)</label>
@@ -160,67 +190,93 @@ export default function Suscriptores() {
               </select>
             </div>
 
-            <button 
-              type="submit" disabled={guardando}
-              className="w-full bg-blue-600 text-white font-bold p-3 rounded hover:bg-blue-700 disabled:bg-blue-300 transition-colors mt-2"
-            >
-              {guardando ? 'Guardando...' : 'Guardar Suscriptor'}
-            </button>
+            <div className="flex gap-2 mt-2">
+              <button
+                type="submit" disabled={guardando}
+                className="flex-1 bg-blue-600 text-white font-bold p-3 rounded hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
+              >
+                {guardando ? 'Guardando...' : editandoId ? 'Actualizar Suscriptor' : 'Guardar Suscriptor'}
+              </button>
+              {editandoId && (
+                <button
+                  type="button" onClick={limpiarFormulario} disabled={guardando}
+                  className="bg-gray-200 text-gray-800 font-bold p-3 rounded hover:bg-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
           </form>
         </div>
 
         {/* Lista de Suscriptores */}
-        <div className="w-full md:w-2/3 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+        <div className="w-full min-w-0 bg-white p-6 rounded-lg shadow-md border border-gray-200">
           <h2 className="text-xl font-extrabold text-gray-900 mb-4">Lista de Suscriptores ({suscriptores.length})</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-100 border-b border-gray-200">
-                  <th className="p-3 text-sm font-bold text-gray-900">Nombre</th>
-                  <th className="p-3 text-sm font-bold text-gray-900">Apellido</th>
-                  <th className="p-3 text-sm font-bold text-gray-900">NUID</th>
-                  <th className="p-3 text-sm font-bold text-gray-900">Teléfono</th>
-                  <th className="p-3 text-sm font-bold text-gray-900">Medidor</th>
-                  <th className="p-3 text-sm font-bold text-gray-900">Dirección</th>
-                  <th className="p-3 text-sm font-bold text-gray-900">Tipo</th>
-                  <th className="p-3 text-sm font-bold text-gray-900">Estado</th>
+                  <th className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">Suscriptor</th>
+                  <th className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">NUID</th>
+                  <th className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">Teléfono</th>
+                  <th className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">Medidor</th>
+                  <th className="px-4 py-3 text-sm font-bold text-gray-900">Dirección</th>
+                  <th className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">Tipo / Estado</th>
+                  <th className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="text-gray-900">
+              <tbody className="text-gray-900 divide-y divide-gray-200">
                 {cargandoLista ? (
                   <tr>
-                    <td colSpan={8} className="p-4 text-center font-medium text-gray-600">
+                    <td colSpan={7} className="p-6 text-center font-medium text-gray-600">
                       Cargando suscriptores...
                     </td>
                   </tr>
                 ) : suscriptores.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-4 text-center font-medium text-gray-600">
+                    <td colSpan={7} className="p-6 text-center font-medium text-gray-600">
                       Aún no hay suscriptores registrados.
                     </td>
                   </tr>
                 ) : (
                   suscriptores.map((sub) => (
-                    <tr key={sub.id} className="border-b border-gray-200 hover:bg-gray-50 text-sm">
-                      <td className="p-3 font-semibold">{sub.nombre}</td>
-                      <td className="p-3 font-semibold">{sub.apellido}</td>
-                      <td className="p-3 font-medium">{sub.nuid || 'N/A'}</td>
-                      <td className="p-3 font-medium">{sub.telefono || 'N/A'}</td>
-                      <td className="p-3 font-medium text-gray-600">{sub.numero_medidor || 'N/A'}</td>
-                      <td className="p-3 font-medium">{sub.direccion}</td>
-                      <td className="p-3 font-medium">
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                          sub.tipo_suscriptor === 'Comercial' ? 'bg-blue-100 text-blue-800' :
-                          sub.tipo_suscriptor === 'Industrial' ? 'bg-purple-100 text-purple-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {sub.tipo_suscriptor || 'Residencial'}
-                        </span>
+                    <tr key={sub.id} className="hover:bg-gray-50 text-sm">
+                      <td className="px-4 py-3.5 max-w-[140px] truncate" title={`${sub.nombre} ${sub.apellido}`}>
+                        <p className="font-semibold text-gray-900 truncate">{sub.nombre} {sub.apellido}</p>
                       </td>
-                      <td className="p-3">
-                        <span className="bg-green-100 text-green-900 font-bold px-2 py-1 rounded text-xs">
-                          {sub.estado || 'Activo'}
-                        </span>
+                      <td className="px-4 py-3.5 font-medium whitespace-nowrap">{sub.nuid || 'N/A'}</td>
+                      <td className="px-4 py-3.5 font-medium whitespace-nowrap">{sub.telefono || 'N/A'}</td>
+                      <td className="px-4 py-3.5 font-medium text-gray-600 whitespace-nowrap">{sub.numero_medidor || 'N/A'}</td>
+                      <td className="px-4 py-3.5 font-medium max-w-[180px] truncate" title={sub.direccion}>{sub.direccion}</td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${
+                            sub.tipo_suscriptor === 'Comercial' ? 'bg-blue-100 text-blue-800' :
+                            sub.tipo_suscriptor === 'Industrial' ? 'bg-purple-100 text-purple-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {sub.tipo_suscriptor || 'Residencial'}
+                          </span>
+                          <span className="bg-green-100 text-green-900 font-bold px-2 py-1 rounded text-xs">
+                            {sub.estado || 'Activo'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => editarSuscriptor(sub)}
+                            className="text-blue-600 hover:text-blue-800 font-bold text-xs px-2 py-1 rounded hover:bg-blue-50"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => eliminarSuscriptor(sub)}
+                            className="text-red-600 hover:text-red-800 font-bold text-xs px-2 py-1 rounded hover:bg-red-50"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
