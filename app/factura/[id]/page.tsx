@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { totalFactura } from '@/lib/facturas';
-import { Printer, ArrowLeft, MessageCircle, Scissors, Pencil, Save, X } from 'lucide-react';
+import { Printer, ArrowLeft, Scissors, Pencil, Save, X } from 'lucide-react';
 import Link from 'next/link';
 
 export default function FacturaPDF() {
@@ -132,15 +132,6 @@ export default function FacturaPDF() {
     setEditando(false);
   };
 
-  const enviarWhatsApp = () => {
-    const urlFactura = window.location.href;
-    const montoMostrar = datos.estado === 'Pendiente' ? deudaTotal : totalFactura(datos);
-
-    const mensaje = `Hola ${datos.suscriptor.nombre} ${datos.suscriptor.apellido}, te compartimos tu factura del ${config?.nombre || 'Acueducto'}. Total a pagar: $${montoMostrar.toLocaleString('es-CO')}. Puedes verla y descargarla aquí: ${urlFactura}`;
-
-    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
-  };
-
   if (cargando) return <div className="p-8 text-center text-gray-500 font-bold">Generando documento...</div>;
   if (!datos || !config) return <div className="p-8 text-center text-red-500 font-bold">Error al cargar la factura o la configuración</div>;
 
@@ -165,9 +156,6 @@ export default function FacturaPDF() {
               <Pencil size={20} /> Editar
             </button>
           )}
-          <button onClick={enviarWhatsApp} className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded shadow hover:bg-green-600 font-bold transition-colors">
-            <MessageCircle size={20} /> Enviar por WhatsApp
-          </button>
           <button onClick={imprimirPDF} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded shadow hover:bg-blue-700 font-bold transition-colors">
             <Printer size={20} /> Imprimir PDF
           </button>
