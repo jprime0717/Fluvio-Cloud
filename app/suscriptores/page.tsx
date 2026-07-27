@@ -70,7 +70,17 @@ export default function Suscriptores() {
   };
 
   const eliminarSuscriptor = async (sub: Suscriptor) => {
-    if (!confirm(`¿Estás seguro de eliminar a ${sub.nombre} ${sub.apellido}? Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`¿Estás seguro de eliminar a ${sub.nombre} ${sub.apellido}? Esto también eliminará todas sus facturas asociadas. Esta acción no se puede deshacer.`)) return;
+
+    const { error: errorFacturas } = await supabase
+      .from('facturas')
+      .delete()
+      .eq('suscriptor_id', sub.id);
+
+    if (errorFacturas) {
+      alert('Error al eliminar las facturas del suscriptor: ' + errorFacturas.message);
+      return;
+    }
 
     const { error } = await supabase
       .from('suscriptores')

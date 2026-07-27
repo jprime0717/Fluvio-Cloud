@@ -22,7 +22,9 @@ export default function FacturaPDF() {
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [mensajeEdit, setMensajeEdit] = useState('');
-  const [edicion, setEdicion] = useState({ nombre: '', apellido: '', monto: '', reconexion: '', interesMora: '', multa: '', cobroMesesAnteriores: '' });
+  const [edicion, setEdicion] = useState({ nombre: '', apellido: '', monto: '', reconexion: '', interesMora: '', multa: '', mesesEnDeuda: '' });
+
+  const VALOR_POR_MES_EN_DEUDA = 10000;
 
   const cargarDatos = async () => {
     // 1. Cargamos la configuración global (Logo, NIT, etc.)
@@ -72,7 +74,7 @@ export default function FacturaPDF() {
       reconexion: String(datos.reconexion || 0),
       interesMora: String(datos.interes_mora || 0),
       multa: String(datos.multa || 0),
-      cobroMesesAnteriores: String(datos.cobro_meses_anteriores || 0),
+      mesesEnDeuda: String(Math.round(Number(datos.cobro_meses_anteriores || 0) / VALOR_POR_MES_EN_DEUDA)),
     });
     setMensajeEdit('');
     setEditando(true);
@@ -90,17 +92,23 @@ export default function FacturaPDF() {
     const reconexionNumerica = Number(edicion.reconexion);
     const interesMoraNumerico = Number(edicion.interesMora);
     const multaNumerica = Number(edicion.multa);
-    const cobroMesesAnterioresNumerico = Number(edicion.cobroMesesAnteriores);
+    const mesesEnDeudaNumerico = Number(edicion.mesesEnDeuda || 0);
 
     if (!edicion.nombre.trim() || !edicion.apellido.trim()) {
       setMensajeEdit('Error: el nombre y el apellido no pueden estar vacíos.');
       return;
     }
-    const valores = [montoNumerico, reconexionNumerica, interesMoraNumerico, multaNumerica, cobroMesesAnterioresNumerico];
+    const valores = [montoNumerico, reconexionNumerica, interesMoraNumerico, multaNumerica, mesesEnDeudaNumerico];
     if (valores.some((v) => !Number.isFinite(v) || v < 0)) {
       setMensajeEdit('Error: los valores deben ser números válidos mayores o iguales a 0.');
       return;
     }
+    if (mesesEnDeudaNumerico > 5) {
+      setMensajeEdit('Error: los meses en deuda no pueden ser más de 5.');
+      return;
+    }
+
+    const cobroMesesAnterioresNumerico = mesesEnDeudaNumerico * VALOR_POR_MES_EN_DEUDA;
 
     setGuardando(true);
     setMensajeEdit('');
@@ -137,10 +145,10 @@ export default function FacturaPDF() {
 
   const totalFacturaActual = totalFactura(datos);
   const totalMostrar = datos.estado === 'Pagado' ? totalFacturaActual : deudaTotal;
-  const totalEdicion = ['monto', 'reconexion', 'interesMora', 'multa', 'cobroMesesAnteriores'].reduce(
+  const totalEdicion = ['monto', 'reconexion', 'interesMora', 'multa'].reduce(
     (acc, campo) => acc + (Number(edicion[campo as keyof typeof edicion]) || 0),
     0
-  );
+  ) + (Number(edicion.mesesEnDeuda) || 0) * VALOR_POR_MES_EN_DEUDA;
 
   return (
     <div className="min-h-screen bg-gray-200 p-8 flex flex-col items-center">
@@ -233,15 +241,19 @@ export default function FacturaPDF() {
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Cobro Meses Anteriores</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Meses en Deuda (1 a 5)</label>
               <input
                 type="number"
                 min="0"
+                max="5"
                 step="1"
-                value={edicion.cobroMesesAnteriores}
-                onChange={(e) => setEdicion({ ...edicion, cobroMesesAnteriores: e.target.value })}
+                value={edicion.mesesEnDeuda}
+                onChange={(e) => setEdicion({ ...edicion, mesesEnDeuda: e.target.value })}
                 className="w-full border border-gray-300 rounded p-2 text-gray-900"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Se suman ${VALOR_POR_MES_EN_DEUDA.toLocaleString('es-CO')} por cada mes en deuda.
+              </p>
             </div>
           </div>
 
@@ -379,7 +391,12 @@ export default function FacturaPDF() {
             )}
             {Number(datos.cobro_meses_anteriores) > 0 && (
               <tr className="border-b border-gray-200">
-                <td className="p-4 text-gray-800 font-bold">Cobro Meses Anteriores</td>
+                <td className="p-4 text-gray-800 font-bold">
+                  Meses en Deuda
+                  <span className="block text-xs text-gray-500 font-medium mt-1">
+                    {Math.round(Number(datos.cobro_meses_anteriores) / VALOR_POR_MES_EN_DEUDA)} mes(es) en deuda
+                  </span>
+                </td>
                 <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
                 <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.cobro_meses_anteriores).toLocaleString('es-CO')}</td>
               </tr>
