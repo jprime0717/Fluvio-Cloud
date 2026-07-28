@@ -9,6 +9,7 @@ import { Printer, Search, Scissors } from 'lucide-react';
 // letter portrait, margen 10mm). 96px = 1in por convención CSS, tanto en
 // pantalla como al imprimir.
 const ALTO_HOJA_PX = ((279.4 - 20) / 25.4) * 96;
+const VALOR_POR_MES_EN_DEUDA = 10000;
 
 export default function ImpresionMasiva() {
   const [mes, setMes] = useState(new Date().getMonth() + 1);
@@ -200,7 +201,12 @@ export default function ImpresionMasiva() {
                       {Number(fac.cobro_meses_anteriores) > 0 && (
                         <tr className="border-b">
                           <td className="p-1.5 text-gray-800">Cobro Meses Anteriores</td>
-                          <td className="p-1.5 text-center text-gray-600">Mes {fac.mes} / {fac.anio}</td>
+                          <td className="p-1.5 text-center text-gray-600">
+                            {Array.from(
+                              { length: Math.round(Number(fac.cobro_meses_anteriores) / VALOR_POR_MES_EN_DEUDA) },
+                              (_, i) => `Mes Deuda ${i + 1}`
+                            ).join(', ')}
+                          </td>
                           <td className="p-1.5 text-right text-gray-800">${Number(fac.cobro_meses_anteriores).toLocaleString('es-CO')}</td>
                         </tr>
                       )}

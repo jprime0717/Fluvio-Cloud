@@ -397,7 +397,12 @@ export default function FacturaPDF() {
                     {Math.round(Number(datos.cobro_meses_anteriores) / VALOR_POR_MES_EN_DEUDA)} mes(es) en deuda
                   </span>
                 </td>
-                <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
+                <td className="p-4 text-center text-gray-700 font-medium">
+                  {Array.from(
+                    { length: Math.round(Number(datos.cobro_meses_anteriores) / VALOR_POR_MES_EN_DEUDA) },
+                    (_, i) => `Mes Deuda ${i + 1}`
+                  ).join(', ')}
+                </td>
                 <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.cobro_meses_anteriores).toLocaleString('es-CO')}</td>
               </tr>
             )}
