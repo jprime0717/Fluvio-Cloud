@@ -40,7 +40,12 @@ export default function ImpresionMasiva() {
       .eq('mes', mes)
       .eq('anio', anio);
 
-    if (data) setFacturas(data);
+    // Ordenamos de menor a mayor por número de factura (numérico, no alfabético,
+    // para que 10266 no quede antes que 9999 como pasaría con orden de texto).
+    if (data) {
+      data.sort((a, b) => Number(a.numero_factura) - Number(b.numero_factura));
+      setFacturas(data);
+    }
     setBuscando(false);
   };
 
