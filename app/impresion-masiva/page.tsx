@@ -62,7 +62,9 @@ export default function ImpresionMasiva() {
   // Si un grupo de 2 facturas (con recargos: reconexión, mora, multa, cobro de
   // meses anteriores) queda más alto que una hoja carta, lo encogemos justo lo
   // necesario para que las 2 facturas sigan cabiendo en una sola hoja en vez de
-  // que la segunda se corra a una página aparte.
+  // que la segunda se corra a una página aparte. Recalculamos también cuando
+  // llega "config" (logo/mensaje del pie), porque ese dato puede llegar
+  // después de las facturas y cambiar la altura real de cada tarjeta.
   useLayoutEffect(() => {
     const nuevasEscalas: Record<number, number> = {};
     paginas.forEach((_, idx) => {
@@ -73,7 +75,7 @@ export default function ImpresionMasiva() {
     });
     setEscalas(nuevasEscalas);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facturas]);
+  }, [facturas, config]);
 
   return (
     <div className="min-h-screen bg-gray-200 p-4 md:p-8 print:p-0">
@@ -123,8 +125,14 @@ export default function ImpresionMasiva() {
           >
             <div
               ref={(el) => { gruposRefs.current[idxPagina] = el; }}
-              className="space-y-6 print:space-y-3"
-              style={escala < 1 ? { transform: `scale(${escala})`, transformOrigin: 'top left' } : undefined}
+              className="space-y-3"
+              // Usamos "zoom" y no "transform: scale" porque los motores de
+              // impresión de los navegadores (Chrome incluido) no reducen el
+              // espacio que ocupa un elemento transformado a la hora de
+              // paginar: el contenido se ve chico pero sigue "empujando" a
+              // la siguiente hoja como si tuviera su tamaño original. "zoom"
+              // sí reduce el tamaño real que ocupa en el flujo del documento.
+              style={escala < 1 ? { zoom: escala } : undefined}
             >
             {pagina.map((fac, idxFactura) => (
               <div key={fac.id}>
@@ -139,7 +147,7 @@ export default function ImpresionMasiva() {
                   </div>
                 )}
 
-                <div className="bg-white p-4 print:p-1 rounded shadow-xl print:shadow-none print:m-0 print:break-inside-avoid relative overflow-hidden text-xs">
+                <div className="bg-white p-2 rounded shadow-xl print:shadow-none print:break-inside-avoid relative overflow-hidden text-xs">
 
                   {fac.estado === 'Pagado' && (
                     <div className="absolute top-1/3 left-1/4 transform -rotate-45 text-green-500 opacity-20 text-6xl font-black uppercase pointer-events-none border-8 border-green-500 rounded-lg p-4">
