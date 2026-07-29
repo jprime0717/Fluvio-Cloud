@@ -102,6 +102,12 @@ export default function ImpresionMasiva() {
             </button>
           )}
         </form>
+        {facturas.length > 0 && (
+          <p className="text-xs text-gray-500 mt-3">
+            Antes de imprimir, en el diálogo de impresión abre &quot;Más opciones&quot; y desactiva
+            &quot;Encabezados y pies de página&quot; para que no salga la URL/IP ni la fecha en los bordes de la hoja.
+          </p>
+        )}
       </div>
 
       {/* Contenedor de Facturas */}
