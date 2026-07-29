@@ -24,8 +24,6 @@ export default function FacturaPDF() {
   const [mensajeEdit, setMensajeEdit] = useState('');
   const [edicion, setEdicion] = useState({ nombre: '', apellido: '', monto: '', reconexion: '', interesMora: '', multa: '', mesesEnDeuda: '' });
 
-  const VALOR_POR_MES_EN_DEUDA = 10000;
-
   const cargarDatos = async () => {
     // 1. Cargamos la configuración global (Logo, NIT, etc.)
     const { data: configData } = await supabase.from('acueductos').select('*').limit(1).single();
@@ -74,7 +72,7 @@ export default function FacturaPDF() {
       reconexion: String(datos.reconexion || 0),
       interesMora: String(datos.interes_mora || 0),
       multa: String(datos.multa || 0),
-      mesesEnDeuda: String(Math.round(Number(datos.cobro_meses_anteriores || 0) / VALOR_POR_MES_EN_DEUDA)),
+      mesesEnDeuda: String(Number(datos.cobro_meses_anteriores || 0)),
     });
     setMensajeEdit('');
     setEditando(true);
@@ -108,7 +106,9 @@ export default function FacturaPDF() {
       return;
     }
 
-    const cobroMesesAnterioresNumerico = mesesEnDeudaNumerico * VALOR_POR_MES_EN_DEUDA;
+    // "Meses en Deuda" ahora solo guarda la cantidad de meses (informativo);
+    // el valor correspondiente se ingresa manualmente en Tarifa de Acueducto.
+    const cobroMesesAnterioresNumerico = mesesEnDeudaNumerico;
 
     setGuardando(true);
     setMensajeEdit('');
@@ -148,7 +148,7 @@ export default function FacturaPDF() {
   const totalEdicion = ['monto', 'reconexion', 'interesMora', 'multa'].reduce(
     (acc, campo) => acc + (Number(edicion[campo as keyof typeof edicion]) || 0),
     0
-  ) + (Number(edicion.mesesEnDeuda) || 0) * VALOR_POR_MES_EN_DEUDA;
+  );
 
   return (
     <div className="min-h-screen bg-gray-200 p-8 flex flex-col items-center">
@@ -252,7 +252,7 @@ export default function FacturaPDF() {
                 className="w-full border border-gray-300 rounded p-2 text-gray-900"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Se suman ${VALOR_POR_MES_EN_DEUDA.toLocaleString('es-CO')} por cada mes en deuda.
+                Solo indica la cantidad de meses, no suma valor. Ajusta la Tarifa de Acueducto manualmente según los meses en deuda.
               </p>
             </div>
           </div>
@@ -391,16 +391,11 @@ export default function FacturaPDF() {
             )}
             {Number(datos.cobro_meses_anteriores) > 0 && (
               <tr className="border-b border-gray-200">
-                <td className="p-4 text-gray-800 font-bold">
-                  Meses en Deuda
-                  <span className="block text-xs text-gray-500 font-medium mt-1">
-                    {Math.round(Number(datos.cobro_meses_anteriores) / VALOR_POR_MES_EN_DEUDA)} mes(es) en deuda
-                  </span>
-                </td>
+                <td className="p-4 text-gray-800 font-bold">Meses en Deuda</td>
                 <td className="p-4 text-center text-gray-700 font-medium">
-                  {Math.round(Number(datos.cobro_meses_anteriores) / VALOR_POR_MES_EN_DEUDA)}
+                  {Math.round(Number(datos.cobro_meses_anteriores))}
                 </td>
-                <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.cobro_meses_anteriores).toLocaleString('es-CO')}</td>
+                <td className="p-4 text-right text-gray-400 font-bold">—</td>
               </tr>
             )}
             {datos.estado === 'Pendiente' && mesesMora > 1 && (
