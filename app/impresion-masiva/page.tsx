@@ -202,10 +202,7 @@ export default function ImpresionMasiva() {
                         <tr className="border-b">
                           <td className="p-1.5 text-gray-800">Cobro Meses Anteriores</td>
                           <td className="p-1.5 text-center text-gray-600">
-                            {Array.from(
-                              { length: Math.round(Number(fac.cobro_meses_anteriores) / VALOR_POR_MES_EN_DEUDA) },
-                              (_, i) => `Mes Deuda ${i + 1}`
-                            ).join(', ')}
+                            {Math.round(Number(fac.cobro_meses_anteriores) / VALOR_POR_MES_EN_DEUDA)}
                           </td>
                           <td className="p-1.5 text-right text-gray-800">${Number(fac.cobro_meses_anteriores).toLocaleString('es-CO')}</td>
                         </tr>

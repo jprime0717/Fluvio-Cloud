@@ -103,8 +103,8 @@ export default function FacturaPDF() {
       setMensajeEdit('Error: los valores deben ser números válidos mayores o iguales a 0.');
       return;
     }
-    if (mesesEnDeudaNumerico > 5) {
-      setMensajeEdit('Error: los meses en deuda no pueden ser más de 5.');
+    if (mesesEnDeudaNumerico > 12) {
+      setMensajeEdit('Error: los meses en deuda no pueden ser más de 12.');
       return;
     }
 
@@ -241,11 +241,11 @@ export default function FacturaPDF() {
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Meses en Deuda (1 a 5)</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Meses en Deuda (1 a 12)</label>
               <input
                 type="number"
                 min="0"
-                max="5"
+                max="12"
                 step="1"
                 value={edicion.mesesEnDeuda}
                 onChange={(e) => setEdicion({ ...edicion, mesesEnDeuda: e.target.value })}
@@ -398,10 +398,7 @@ export default function FacturaPDF() {
                   </span>
                 </td>
                 <td className="p-4 text-center text-gray-700 font-medium">
-                  {Array.from(
-                    { length: Math.round(Number(datos.cobro_meses_anteriores) / VALOR_POR_MES_EN_DEUDA) },
-                    (_, i) => `Mes Deuda ${i + 1}`
-                  ).join(', ')}
+                  {Math.round(Number(datos.cobro_meses_anteriores) / VALOR_POR_MES_EN_DEUDA)}
                 </td>
                 <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.cobro_meses_anteriores).toLocaleString('es-CO')}</td>
               </tr>
