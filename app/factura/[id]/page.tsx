@@ -22,7 +22,7 @@ export default function FacturaPDF() {
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [mensajeEdit, setMensajeEdit] = useState('');
-  const [edicion, setEdicion] = useState({ nombre: '', apellido: '', monto: '', reconexion: '', interesMora: '', multa: '', mesesEnDeuda: '' });
+  const [edicion, setEdicion] = useState({ nombre: '', apellido: '', monto: '', reconexion: '', interesMora: '', multa: '', matricula: '', mesesEnDeuda: '' });
 
   const cargarDatos = async () => {
     // 1. Cargamos la configuración global (Logo, NIT, etc.)
@@ -42,7 +42,7 @@ export default function FacturaPDF() {
       // 3. Magia: Calculamos la mora (Buscamos todas las facturas pendientes de esta persona)
       const { data: pendientes } = await supabase
         .from('facturas')
-        .select('monto, reconexion, interes_mora, multa')
+        .select('monto, reconexion, interes_mora, multa, matricula')
         .eq('suscriptor_id', facturaData.suscriptor.id)
         .eq('estado', 'Pendiente');
 
@@ -72,6 +72,7 @@ export default function FacturaPDF() {
       reconexion: String(datos.reconexion || 0),
       interesMora: String(datos.interes_mora || 0),
       multa: String(datos.multa || 0),
+      matricula: String(datos.matricula || 0),
       mesesEnDeuda: String(Number(datos.cobro_meses_anteriores || 0)),
     });
     setMensajeEdit('');
@@ -90,13 +91,14 @@ export default function FacturaPDF() {
     const reconexionNumerica = Number(edicion.reconexion);
     const interesMoraNumerico = Number(edicion.interesMora);
     const multaNumerica = Number(edicion.multa);
+    const matriculaNumerica = Number(edicion.matricula);
     const mesesEnDeudaNumerico = Number(edicion.mesesEnDeuda || 0);
 
     if (!edicion.nombre.trim() || !edicion.apellido.trim()) {
       setMensajeEdit('Error: el nombre y el apellido no pueden estar vacíos.');
       return;
     }
-    const valores = [montoNumerico, reconexionNumerica, interesMoraNumerico, multaNumerica, mesesEnDeudaNumerico];
+    const valores = [montoNumerico, reconexionNumerica, interesMoraNumerico, multaNumerica, matriculaNumerica, mesesEnDeudaNumerico];
     if (valores.some((v) => !Number.isFinite(v) || v < 0)) {
       setMensajeEdit('Error: los valores deben ser números válidos mayores o iguales a 0.');
       return;
@@ -125,6 +127,7 @@ export default function FacturaPDF() {
         reconexion: reconexionNumerica,
         interes_mora: interesMoraNumerico,
         multa: multaNumerica,
+        matricula: matriculaNumerica,
         cobro_meses_anteriores: cobroMesesAnterioresNumerico,
       })
       .eq('id', facturaId);
@@ -145,7 +148,7 @@ export default function FacturaPDF() {
 
   const totalFacturaActual = totalFactura(datos);
   const totalMostrar = datos.estado === 'Pagado' ? totalFacturaActual : deudaTotal;
-  const totalEdicion = ['monto', 'reconexion', 'interesMora', 'multa'].reduce(
+  const totalEdicion = ['monto', 'reconexion', 'interesMora', 'multa', 'matricula'].reduce(
     (acc, campo) => acc + (Number(edicion[campo as keyof typeof edicion]) || 0),
     0
   );
@@ -206,7 +209,7 @@ export default function FacturaPDF() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-4">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Reconexión</label>
               <input
@@ -237,6 +240,17 @@ export default function FacturaPDF() {
                 step="1"
                 value={edicion.multa}
                 onChange={(e) => setEdicion({ ...edicion, multa: e.target.value })}
+                className="w-full border border-gray-300 rounded p-2 text-gray-900"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Matrícula</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={edicion.matricula}
+                onChange={(e) => setEdicion({ ...edicion, matricula: e.target.value })}
                 className="w-full border border-gray-300 rounded p-2 text-gray-900"
               />
             </div>
@@ -279,7 +293,7 @@ export default function FacturaPDF() {
       )}
 
       {/* Papel de la Factura */}
-      <div className="bg-white w-full max-w-2xl p-10 rounded shadow-xl print:shadow-none print:p-0 relative overflow-hidden">
+      <div className="factura-print bg-white w-full max-w-2xl p-10 rounded shadow-xl print:shadow-none print:p-0 relative overflow-hidden">
         
         {/* Marca de agua si está pagado */}
         {datos.estado === 'Pagado' && (
@@ -297,37 +311,42 @@ export default function FacturaPDF() {
               <img src={config.logo_url} alt="Logo" className="w-24 h-24 object-contain rounded" onError={(e) => e.currentTarget.style.display = 'none'} />
             )}
             <div>
-              <h1 className="text-2xl font-extrabold text-gray-800 uppercase tracking-wide">{config.nombre}</h1>
-              <p className="text-gray-600 font-bold">NIT: {config.nit}</p>
-              <p className="text-gray-500 text-sm font-medium">{config.direccion}</p>
-              <p className="text-gray-500 text-sm font-medium">Tel: {config.telefono} | {config.email}</p>
+              <h1 className="text-2xl font-extrabold text-gray-900 uppercase tracking-wide">{config.nombre}</h1>
+              <p className="text-gray-800 font-bold">NIT: {config.nit}</p>
+              <p className="text-gray-700 text-sm font-semibold">{config.direccion}</p>
+              <p className="text-gray-700 text-sm font-semibold">Tel: {config.telefono} | {config.email}</p>
             </div>
           </div>
           <div className="text-right bg-blue-50 p-3 rounded-lg border border-blue-100">
             <h2 className="text-xl font-bold text-blue-900 uppercase">Factura de Venta</h2>
-            <p className="text-gray-800 font-mono mt-1 text-lg font-bold">N° {datos.numero_factura}</p>
-            <p className="text-gray-600 text-sm mt-1 font-bold">Emisión: {new Date(datos.fecha_emision).toLocaleDateString()}</p>
-            <p className="text-gray-600 text-sm font-bold">Período: Mes {datos.mes} / {datos.anio}</p>
+            <p className="text-gray-900 font-mono mt-1 text-lg font-bold">N° {datos.numero_factura}</p>
+            <p className="text-gray-800 text-sm mt-1 font-bold">Emisión: {new Date(datos.fecha_emision).toLocaleDateString()}</p>
+            <p className="text-gray-800 text-sm font-bold">Período: Mes {datos.mes} / {datos.anio}</p>
           </div>
         </div>
 
         {/* Datos del Cliente */}
         <div className="mb-8 grid grid-cols-2 gap-4">
           <div className="bg-gray-50 p-4 rounded border border-gray-200">
-            <h3 className="text-xs font-black text-gray-500 uppercase mb-2">Facturar a:</h3>
-            <p className="text-lg font-extrabold text-gray-800">{datos.suscriptor.nombre} {datos.suscriptor.apellido}</p>
+            <h3 className="text-xs font-black text-gray-700 uppercase mb-2">Facturar a:</h3>
+            <p className="text-lg font-extrabold text-gray-900">{datos.suscriptor.nombre} {datos.suscriptor.apellido}</p>
 
             {/* OCULTAMOS EL DOCUMENTO Y DEJAMOS SOLO EL MEDIDOR Y LA DIRECCIÓN */}
-            <p className="text-gray-700 font-medium mt-1">
-              <span className="font-bold">NUID:</span> {datos.suscriptor.nuid || 'N/A'}
+            <p className="text-black font-bold mt-1">
+              <span className="font-black">NUID:</span> {datos.suscriptor.nuid || 'N/A'}
             </p>
-            <p className="text-gray-700 font-medium">
-              <span className="font-bold">Medidor:</span> {datos.suscriptor.numero_medidor || 'N/A'}
+            <p className="text-black font-bold">
+              <span className="font-black">Medidor:</span> {datos.suscriptor.numero_medidor || 'N/A'}
             </p>
-            <p className="text-gray-700 font-medium">
-              <span className="font-bold">Dirección:</span> {datos.suscriptor.direccion}
+
+            {/* DIRECCIÓN RESALTADA: es el dato que la persona que reparte/entrega
+                la factura más necesita leer bien, así que va más grande, oscura
+                y con fondo propio para que salte a la vista incluso impresa. */}
+            <p className="mt-2 bg-blue-50 border-2 border-blue-300 rounded px-2 py-1.5 text-black font-black text-base leading-snug">
+              <span className="block text-[10px] font-black text-blue-900 uppercase tracking-wider">Dirección</span>
+              {datos.suscriptor.direccion}
             </p>
-            
+
             {/* NUEVO: Etiqueta Visual del Tipo de Suscriptor */}
             <div className="mt-3">
               <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 border border-blue-200 text-xs font-black rounded uppercase tracking-wider">
@@ -340,7 +359,7 @@ export default function FacturaPDF() {
             <div className="bg-red-50 p-4 rounded border border-red-200 flex flex-col justify-center items-center text-center">
               <h3 className="text-red-800 font-black uppercase mb-1 text-lg">¡Aviso de Mora!</h3>
               <p className="text-red-700 font-medium">Usted presenta <strong className="font-black">{mesesMora} meses</strong> pendientes de pago.</p>
-              <p className="text-xs text-red-600 mt-2 font-bold">El valor total incluye toda su deuda acumulada.</p>
+              <p className="text-xs text-red-700 mt-2 font-bold">El valor total incluye toda su deuda acumulada.</p>
             </div>
           )}
         </div>
@@ -348,7 +367,7 @@ export default function FacturaPDF() {
         {/* Tabla de Conceptos */}
         <table className="w-full text-left mb-8 border-collapse border border-gray-200">
           <thead>
-            <tr className="bg-blue-900 text-white">
+            <tr className="bg-blue-900 text-white print:bg-white print:border-b-2 print:border-black">
               <th className="p-3 rounded-tl border-r border-blue-800 font-bold">Descripción</th>
               <th className="p-3 text-center border-r border-blue-800 font-bold">Período</th>
               <th className="p-3 text-right rounded-tr font-bold">Valor</th>
@@ -356,46 +375,53 @@ export default function FacturaPDF() {
           </thead>
           <tbody>
             <tr className="border-b border-gray-200">
-              <td className="p-4 text-gray-800 font-bold">
+              <td className="p-4 text-black font-black">
                 Servicio de Acueducto
                 {/* NUEVO: Texto explicativo automático según el tipo */}
-                <span className="block text-xs text-gray-500 font-medium mt-1">
-                  {datos.suscriptor.tipo_suscriptor === 'Comercial' ? '(Incluye recargo por uso comercial)' : 
-                   datos.suscriptor.tipo_suscriptor === 'Industrial' ? '(Incluye recargo por uso industrial)' : 
+                <span className="block text-xs text-gray-600 font-medium mt-1">
+                  {datos.suscriptor.tipo_suscriptor === 'Comercial' ? '(Incluye recargo por uso comercial)' :
+                   datos.suscriptor.tipo_suscriptor === 'Industrial' ? '(Incluye recargo por uso industrial)' :
                    '(Tarifa base residencial)'}
                 </span>
               </td>
-              <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
+              <td className="p-4 text-center text-black font-bold">{datos.mes} / {datos.anio}</td>
               <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.monto).toLocaleString('es-CO')}</td>
             </tr>
             {Number(datos.reconexion) > 0 && (
               <tr className="border-b border-gray-200">
-                <td className="p-4 text-gray-800 font-bold">Reconexión</td>
-                <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
+                <td className="p-4 text-black font-black">Reconexión</td>
+                <td className="p-4 text-center text-black font-bold">{datos.mes} / {datos.anio}</td>
                 <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.reconexion).toLocaleString('es-CO')}</td>
               </tr>
             )}
             {Number(datos.interes_mora) > 0 && (
               <tr className="border-b border-gray-200">
-                <td className="p-4 text-gray-800 font-bold">Intereses de Mora</td>
-                <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
+                <td className="p-4 text-black font-black">Intereses de Mora</td>
+                <td className="p-4 text-center text-black font-bold">{datos.mes} / {datos.anio}</td>
                 <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.interes_mora).toLocaleString('es-CO')}</td>
               </tr>
             )}
             {Number(datos.multa) > 0 && (
               <tr className="border-b border-gray-200">
-                <td className="p-4 text-gray-800 font-bold">Multa</td>
-                <td className="p-4 text-center text-gray-700 font-medium">{datos.mes} / {datos.anio}</td>
+                <td className="p-4 text-black font-black">Multa</td>
+                <td className="p-4 text-center text-black font-bold">{datos.mes} / {datos.anio}</td>
                 <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.multa).toLocaleString('es-CO')}</td>
+              </tr>
+            )}
+            {Number(datos.matricula) > 0 && (
+              <tr className="border-b border-gray-200">
+                <td className="p-4 text-black font-black">Matrícula</td>
+                <td className="p-4 text-center text-black font-bold">{datos.mes} / {datos.anio}</td>
+                <td className="p-4 text-right text-gray-900 font-bold">${Number(datos.matricula).toLocaleString('es-CO')}</td>
               </tr>
             )}
             {Number(datos.cobro_meses_anteriores) > 0 && (
               <tr className="border-b border-gray-200">
-                <td className="p-4 text-gray-800 font-bold">Meses en Deuda</td>
+                <td className="p-4 text-black font-black">Meses en Deuda</td>
                 <td className="p-4 text-center text-gray-700 font-medium">
                   {Math.round(Number(datos.cobro_meses_anteriores))}
                 </td>
-                <td className="p-4 text-right text-gray-400 font-bold">—</td>
+                <td className="p-4 text-right text-gray-600 font-bold">—</td>
               </tr>
             )}
             {datos.estado === 'Pendiente' && mesesMora > 1 && (
@@ -412,7 +438,7 @@ export default function FacturaPDF() {
           <div className="w-2/3 md:w-1/2 bg-gray-50 p-5 rounded-lg border border-gray-300 shadow-sm">
             <div className="flex justify-between font-black text-2xl text-gray-800">
               <span>TOTAL:</span>
-              <span className={datos.estado === 'Pagado' ? 'text-green-600' : 'text-red-600'}>
+              <span className={datos.estado === 'Pagado' ? 'text-green-700' : 'text-red-700'}>
                 ${totalMostrar.toLocaleString('es-CO')}
               </span>
             </div>
@@ -425,67 +451,70 @@ export default function FacturaPDF() {
         </div>
 
         {/* Pie de página dinámico */}
-        <div className="border-t-2 border-gray-200 pt-6 text-center text-gray-600 text-sm">
+        <div className="border-t-2 border-gray-300 pt-6 text-center text-gray-800 text-base">
           {/* AQUÍ CORREGIMOS EL ERROR DE LAS COMILLAS (&quot;) */}
           <p className="font-bold italic">&quot;{config.mensaje_factura}&quot;</p>
-          <p className="mt-2 text-xs text-gray-400 font-medium">Generado por Acuasoft Clone - Plataforma SaaS</p>
+          <p className="mt-2 text-xs text-gray-600 font-medium">Generado por Acuasoft Clone - Plataforma SaaS</p>
         </div>
 
         {/* --- INICIO LÍNEA DE CORTE --- */}
         <div className="relative flex items-center py-8 print:py-6 mt-4">
           {/* AQUÍ CORREGIMOS LAS CLASES FLEX-GROW A GROW */}
-          <div className="grow border-t-2 border-dashed border-gray-400"></div>
+          <div className="grow border-t-4 border-dashed border-gray-600"></div>
           {/* AQUÍ CORREGIMOS LAS CLASES FLEX-SHRINK-0 A SHRINK-0 */}
-          <span className="shrink-0 mx-4 text-gray-500 flex items-center gap-2">
-            <Scissors size={20} className="transform -rotate-90 text-gray-400" />
-            <span className="text-xs uppercase font-bold tracking-widest text-gray-400 print:text-[10px]">
+          <span className="shrink-0 mx-4 text-gray-600 flex items-center gap-2">
+            <Scissors size={20} className="transform -rotate-90 text-gray-600" />
+            <span className="text-xs uppercase font-bold tracking-widest text-gray-600 print:text-[11px]">
               Línea de corte
             </span>
           </span>
-          <div className="grow border-t-2 border-dashed border-gray-400"></div>
+          <div className="grow border-t-4 border-dashed border-gray-600"></div>
         </div>
 
         {/* --- INICIO DESPRENDIBLE DE PAGO --- */}
-        <div className="border-2 border-gray-800 rounded-xl p-6 bg-white print:border print:border-gray-500 print:shadow-none shadow-sm mb-4">
+        <div className="border-2 border-gray-800 rounded-xl p-6 bg-white print:border print:border-gray-700 print:shadow-none shadow-sm mb-4">
           <div className="flex justify-between items-center border-b border-gray-300 pb-4 mb-4">
             <div>
-              <h3 className="text-xl font-extrabold text-gray-800 uppercase tracking-wide">
+              <h3 className="text-xl font-extrabold text-gray-900 uppercase tracking-wide">
                 Desprendible de Pago
               </h3>
-              <p className="text-xs font-bold text-gray-500 mt-1 uppercase">Copia para el Acueducto</p>
+              <p className="text-xs font-bold text-gray-700 mt-1 uppercase">Copia para el Acueducto</p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-500 font-bold uppercase">Período</p>
+              <p className="text-sm text-gray-700 font-bold uppercase">Período</p>
               <p className="font-extrabold text-gray-900">Mes {datos.mes} / {datos.anio}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-gray-500 text-xs font-bold uppercase">Suscriptor:</p>
+              <p className="text-gray-700 text-xs font-bold uppercase">Suscriptor:</p>
               <p className="font-extrabold text-gray-900 text-lg">{datos.suscriptor.nombre} {datos.suscriptor.apellido}</p>
 
               {/* OCULTAMOS TAMBIÉN EL DOCUMENTO DEL DESPRENDIBLE */}
-              <p className="text-gray-600 text-xs font-bold mt-1">NUID: {datos.suscriptor.nuid || 'N/A'} | Medidor: {datos.suscriptor.numero_medidor || 'N/A'}</p>
-              
+              <p className="text-gray-800 text-xs font-bold mt-1">NUID: {datos.suscriptor.nuid || 'N/A'} | Medidor: {datos.suscriptor.numero_medidor || 'N/A'}</p>
+
+              {/* DIRECCIÓN RESALTADA también en el desprendible */}
+              <p className="text-gray-900 text-xs font-bold mt-1">Dirección: {datos.suscriptor.direccion}</p>
+
               {/* NUEVO: Tipo en el desprendible */}
               <p className="text-xs font-bold text-blue-700 mt-1 uppercase">{datos.suscriptor.tipo_suscriptor || 'Residencial'}</p>
             </div>
-            
+
             <div className="text-right">
-              <p className="text-gray-500 text-xs font-bold uppercase">N° Factura:</p>
+              <p className="text-gray-700 text-xs font-bold uppercase">N° Factura:</p>
               <p className="font-mono font-bold text-gray-900">#{datos.numero_factura}</p>
             </div>
 
             <div>
-              <p className="text-gray-500 text-xs font-bold uppercase">Estado:</p>
-              <p className={`font-black uppercase ${datos.estado === 'Pagado' ? 'text-green-600' : 'text-red-600'}`}>
+              <p className="text-gray-700 text-xs font-bold uppercase">Estado:</p>
+              <p className={`font-black uppercase ${datos.estado === 'Pagado' ? 'text-green-700' : 'text-red-700'}`}>
                 {datos.estado}
               </p>
             </div>
-            
+
             <div className="text-right">
-              <p className="text-gray-500 text-xs font-bold uppercase">Total a Pagar:</p>
+              <p className="text-gray-700 text-xs font-bold uppercase">Total a Pagar:</p>
               <p className={`font-black text-2xl print:text-black ${datos.estado === 'Pagado' ? 'text-green-700' : 'text-blue-700'}`}>
                 ${totalMostrar.toLocaleString('es-CO')}
               </p>

@@ -44,3 +44,20 @@ body {
   size: letter portrait;
   margin: 10mm;
 }
+
+/* En papel (sobre todo impresoras en blanco y negro, o con "gráficos de
+   fondo" desactivado en el diálogo de impresión) los grises intermedios
+   (gray-600/700/800) y los colores tipo texto (rojo/verde/azul-900) se ven
+   "lavados" aunque en pantalla se vean oscuros: el driver de la impresora
+   los reconvierte a un gris claro para ahorrar tinta. La única forma de
+   garantizar texto realmente oscuro en el papel es forzar negro puro (#000)
+   en todo el texto de la factura al imprimir, sin importar el color que
+   tenga en pantalla. Los fondos de color quedan intactos (o desaparecen
+   solos si el usuario no activó "gráficos de fondo"), así que no afecta el
+   contraste. Se usa .factura-print como contenedor del papel impreso. */
+@media print {
+  .factura-print,
+  .factura-print * {
+    color: #000 !important;
+  }
+}

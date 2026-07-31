@@ -17,7 +17,7 @@ export default function ListaFacturas() {
       const { data } = await supabase
         .from('facturas')
         .select(`
-          id, numero_factura, mes, anio, monto, reconexion, interes_mora, multa, estado,
+          id, numero_factura, mes, anio, monto, reconexion, interes_mora, multa, matricula, estado,
           suscriptor:suscriptor_id (nombre, apellido, nuid, direccion)
         `);
 

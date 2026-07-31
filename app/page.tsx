@@ -40,7 +40,7 @@ export default function ResumenDashboard() {
         // 2. Consulta Real: Obtener todas las facturas del MES ACTUAL
         const { data: facturasMes, error: errFacs } = await supabase
           .from('facturas')
-          .select('monto, reconexion, interes_mora, multa, estado')
+          .select('monto, reconexion, interes_mora, multa, matricula, estado')
           .eq('mes', numeroMes)
           .eq('anio', anioActual);
 
