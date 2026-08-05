@@ -5,52 +5,21 @@ import { supabase } from '@/lib/supabase';
 import { totalFactura } from '@/lib/facturas';
 import { Search, CheckCircle, DollarSign } from 'lucide-react';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Suscriptor = any;
+
 export default function Recaudo() {
   const [busqueda, setBusqueda] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [facturasPendientes, setFacturasPendientes] = useState<any[]>([]);
+  const [coincidencias, setCoincidencias] = useState<Suscriptor[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
-  // 1. Buscar facturas pendientes por NUID o medidor
-  const buscarFacturas = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBuscando(true);
-    setMensaje('');
-    setFacturasPendientes([]);
+  // Carga las facturas pendientes de un suscriptor ya identificado
+  const cargarFacturasDe = async (suscriptor: Suscriptor) => {
+    setCoincidencias([]);
 
-    // Se retiran caracteres con significado especial en la sintaxis de filtros
-    // de PostgREST (, . ( ) ') para evitar que el usuario inyecte condiciones
-    // adicionales en el .or() de abajo.
-    const termino = busqueda.trim().replace(/[,."'()]/g, '');
-
-    // CORREGIDO: Quitamos ", error: errSub" porque no lo estábamos usando
-    // Pedimos hasta 2 resultados (no 1) para poder detectar coincidencias
-    // ambiguas: varios suscriptores del censo original comparten el mismo
-    // texto de medidor ("compartido", "no se ve # medidor", etc.), así que
-    // si alguien busca por ese texto no queremos devolver un suscriptor
-    // cualquiera al azar.
-    const { data: suscriptores } = await supabase
-      .from('suscriptores')
-      .select('id, nombre, apellido, nuid, numero_medidor')
-      .or(`numero_medidor.eq.${termino},nuid.eq.${termino}`)
-      .limit(2);
-
-    if (!suscriptores || suscriptores.length === 0) {
-      setMensaje('No se encontró ningún suscriptor con ese NUID o número de medidor.');
-      setBuscando(false);
-      return;
-    }
-
-    if (suscriptores.length > 1) {
-      setMensaje('Ese término coincide con más de un suscriptor (por ejemplo, varios comparten el mismo texto de medidor). Busca por el NUID en su lugar.');
-      setBuscando(false);
-      return;
-    }
-
-    const suscriptor = suscriptores[0];
-
-    // CORREGIDO: Quitamos ", error: errFac" porque tampoco lo usábamos
     const { data: facturas } = await supabase
       .from('facturas')
       .select('*')
@@ -60,8 +29,8 @@ export default function Recaudo() {
       .order('mes', { ascending: true });
 
     if (facturas && facturas.length > 0) {
-      const facturasConDatos = facturas.map(f => ({ 
-        ...f, 
+      const facturasConDatos = facturas.map(f => ({
+        ...f,
         nombre_completo: `${suscriptor.nombre} ${suscriptor.apellido}`,
         numero_medidor: suscriptor.numero_medidor
       }));
@@ -69,7 +38,50 @@ export default function Recaudo() {
     } else {
       setMensaje(`${suscriptor.nombre} ${suscriptor.apellido} está al día. No tiene facturas pendientes.`);
     }
+  };
 
+  // 1. Buscar suscriptor por NUID, medidor, nombre o dirección
+  const buscarFacturas = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBuscando(true);
+    setMensaje('');
+    setFacturasPendientes([]);
+    setCoincidencias([]);
+
+    // Se retiran caracteres con significado especial en la sintaxis de filtros
+    // de PostgREST (, . ( ) ' % _) para evitar que el usuario inyecte condiciones
+    // adicionales en el .or() de abajo o comodines de ilike.
+    const termino = busqueda.trim().replace(/[,."'()%_]/g, '');
+
+    const { data: suscriptores } = await supabase
+      .from('suscriptores')
+      .select('id, nombre, apellido, nuid, numero_medidor, direccion')
+      .or(`numero_medidor.eq.${termino},nuid.eq.${termino},nombre.ilike.%${termino}%,apellido.ilike.%${termino}%,direccion.ilike.%${termino}%`)
+      .limit(10);
+
+    if (!suscriptores || suscriptores.length === 0) {
+      setMensaje('No se encontró ningún suscriptor con ese NUID, medidor, nombre o dirección.');
+      setBuscando(false);
+      return;
+    }
+
+    if (suscriptores.length > 1) {
+      setCoincidencias(suscriptores);
+      setMensaje('Se encontró más de un suscriptor con ese criterio. Selecciona el correcto:');
+      setBuscando(false);
+      return;
+    }
+
+    await cargarFacturasDe(suscriptores[0]);
+    setBuscando(false);
+  };
+
+  // Cuando hay varias coincidencias, el usuario elige el suscriptor correcto
+  const seleccionarSuscriptor = async (suscriptor: Suscriptor) => {
+    setBuscando(true);
+    setMensaje('');
+    setFacturasPendientes([]);
+    await cargarFacturasDe(suscriptor);
     setBuscando(false);
   };
 
@@ -101,14 +113,14 @@ export default function Recaudo() {
         <form onSubmit={buscarFacturas} className="flex gap-4 items-end">
           <div className="flex-1">
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              Buscar por NUID o Número de Medidor
+              Buscar por NUID, Medidor, Nombre o Dirección
             </label>
             <input
               type="text"
               required
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Ej: A-001 o 101100047"
+              placeholder="Ej: A-001, 101100047, Juan Pérez o Calle 10 #5-20"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-black"
             />
           </div>
@@ -122,6 +134,28 @@ export default function Recaudo() {
         </form>
         {mensaje && <p className="mt-4 text-blue-600 bg-blue-50 p-3 rounded font-medium">{mensaje}</p>}
       </div>
+
+      {/* Selector cuando hay varias coincidencias */}
+      {coincidencias.length > 0 && (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden border-t-4 border-blue-500 mb-8">
+          {coincidencias.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => seleccionarSuscriptor(s)}
+              className="w-full text-left flex justify-between items-center p-4 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer"
+            >
+              <div>
+                <p className="font-bold text-gray-800">{s.nombre} {s.apellido}</p>
+                <p className="text-sm text-gray-600">{s.direccion || 'Sin dirección'}</p>
+              </div>
+              <div className="text-right text-sm text-gray-500">
+                <p>NUID: {s.nuid || 'N/A'}</p>
+                <p>Medidor: {s.numero_medidor || 'N/A'}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Resultados de Facturas Pendientes */}
       {facturasPendientes.length > 0 && (
