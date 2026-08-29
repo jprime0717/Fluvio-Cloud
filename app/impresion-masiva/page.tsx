@@ -16,6 +16,12 @@ export default function ImpresionMasiva() {
   const [facturas, setFacturas] = useState<any[]>([]);
   const [config, setConfig] = useState<any>(null);
   const [buscando, setBuscando] = useState(false);
+  // Deuda acumulada real por suscriptor (suma de TODAS sus facturas en
+  // estado Pendiente, sin importar el mes). Se recalcula en cada búsqueda
+  // a partir del estado real de la base de datos, igual que en la vista de
+  // una factura individual, así que nunca duplica un cobro: en cuanto una
+  // factura vieja se marca Pagada, deja de sumar aquí automáticamente.
+  const [deudaPorSuscriptor, setDeudaPorSuscriptor] = useState<Map<string, { total: number; cantidad: number }>>(new Map());
   const gruposRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const [escalas, setEscalas] = useState<Record<number, number>>({});
 
@@ -36,7 +42,7 @@ export default function ImpresionMasiva() {
     // (solo las columnas que se muestran, para que la respuesta pese menos)
     const { data } = await supabase
       .from('facturas')
-      .select(`id, numero_factura, mes, anio, monto, reconexion, interes_mora, multa, matricula, cobro_meses_anteriores, estado, suscriptor:suscriptor_id (nombre, apellido, nuid, direccion)`)
+      .select(`id, numero_factura, mes, anio, monto, reconexion, interes_mora, multa, matricula, cobro_meses_anteriores, estado, suscriptor_id, suscriptor:suscriptor_id (nombre, apellido, nuid, direccion)`)
       .eq('mes', mes)
       .eq('anio', anio);
 
@@ -45,6 +51,28 @@ export default function ImpresionMasiva() {
     if (data) {
       data.sort((a, b) => Number(a.numero_factura) - Number(b.numero_factura));
       setFacturas(data);
+
+      // Traemos, en una sola consulta, TODAS las facturas Pendiente de los
+      // suscriptores de este lote (de cualquier mes/año) para poder sumar
+      // su deuda acumulada real al imprimir.
+      const idsSuscriptores = [...new Set(data.map((f) => f.suscriptor_id))];
+      const nuevaDeuda = new Map<string, { total: number; cantidad: number }>();
+      if (idsSuscriptores.length > 0) {
+        const { data: pendientes } = await supabase
+          .from('facturas')
+          .select('suscriptor_id, monto, reconexion, interes_mora, multa, matricula')
+          .in('suscriptor_id', idsSuscriptores)
+          .eq('estado', 'Pendiente');
+
+        (pendientes || []).forEach((p) => {
+          const actual = nuevaDeuda.get(p.suscriptor_id) || { total: 0, cantidad: 0 };
+          nuevaDeuda.set(p.suscriptor_id, {
+            total: actual.total + totalFactura(p),
+            cantidad: actual.cantidad + 1,
+          });
+        });
+      }
+      setDeudaPorSuscriptor(nuevaDeuda);
     }
     setBuscando(false);
   };
@@ -75,7 +103,7 @@ export default function ImpresionMasiva() {
     });
     setEscalas(nuevasEscalas);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facturas, config]);
+  }, [facturas, config, deudaPorSuscriptor]);
 
   return (
     <div className="min-h-screen bg-gray-200 p-4 md:p-8 print:p-0">
@@ -140,7 +168,18 @@ export default function ImpresionMasiva() {
               // sí reduce el tamaño real que ocupa en el flujo del documento.
               style={escala < 1 ? { zoom: escala } : undefined}
             >
-            {pagina.map((fac, idxFactura) => (
+            {pagina.map((fac, idxFactura) => {
+              // Deuda acumulada real (todas sus facturas Pendiente, de cualquier
+              // mes) y total a mostrar: si está Pagada solo mostramos su propio
+              // valor; si sigue Pendiente, mostramos la deuda total acumulada,
+              // igual que en la vista de una factura individual.
+              const infoDeuda = deudaPorSuscriptor.get(fac.suscriptor_id);
+              const totalFacturaActual = totalFactura(fac);
+              const deudaTotal = infoDeuda?.total ?? (fac.estado === 'Pendiente' ? totalFacturaActual : 0);
+              const mesesMora = infoDeuda?.cantidad ?? (fac.estado === 'Pendiente' ? 1 : 0);
+              const totalMostrar = fac.estado === 'Pagado' ? totalFacturaActual : deudaTotal;
+
+              return (
               <div key={fac.id}>
                 {/* Línea de corte entre las dos facturas de la misma hoja */}
                 {idxFactura === 1 && (
@@ -237,6 +276,16 @@ export default function ImpresionMasiva() {
                           <td className="p-1.5 text-right text-gray-700 italic">—</td>
                         </tr>
                       )}
+                      {fac.estado === 'Pendiente' && mesesMora > 1 && (
+                        <tr className="border-b bg-gray-50">
+                          <td colSpan={2} className="p-1.5 text-black font-bold italic">
+                            Saldos anteriores pendientes ({mesesMora - 1} meses)
+                          </td>
+                          <td className="p-1.5 text-right text-gray-900 font-bold">
+                            ${(deudaTotal - totalFacturaActual).toLocaleString('es-CO')}
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
 
@@ -245,7 +294,7 @@ export default function ImpresionMasiva() {
                       <div className="flex justify-between font-black text-lg text-gray-900">
                         <span>TOTAL:</span>
                         <span className={fac.estado === 'Pagado' ? 'text-green-700' : 'text-red-700'}>
-                          ${totalFactura(fac).toLocaleString('es-CO')}
+                          ${totalMostrar.toLocaleString('es-CO')}
                         </span>
                       </div>
                     </div>
@@ -278,7 +327,9 @@ export default function ImpresionMasiva() {
                       <div>
                         <p className="text-gray-700 font-bold uppercase">Suscriptor:</p>
                         <p className="font-extrabold text-gray-900 truncate">{fac.suscriptor.nombre} {fac.suscriptor.apellido}</p>
-                        <p className="text-gray-800 font-bold mt-0.5 truncate">NUID: {fac.suscriptor.nuid || 'N/A'}</p>
+                        <p className="text-gray-800 font-bold mt-0.5 leading-snug">
+                          NUID: {fac.suscriptor.nuid || 'N/A'} | Predio: {fac.suscriptor.direccion || 'N/A'}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="text-gray-700 font-bold uppercase">N° Factura:</p>
@@ -290,13 +341,14 @@ export default function ImpresionMasiva() {
                       </div>
                       <div className="text-right">
                         <p className="text-gray-700 font-bold uppercase">Total a Pagar:</p>
-                        <p className="font-black text-base text-blue-800 print:text-black">${totalFactura(fac).toLocaleString('es-CO')}</p>
+                        <p className="font-black text-base text-blue-800 print:text-black">${totalMostrar.toLocaleString('es-CO')}</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
             </div>
           </div>
           );
