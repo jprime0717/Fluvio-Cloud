@@ -3,6 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { totalFactura } from '@/lib/facturas';
+import { compararDirecciones } from '@/lib/direccion';
 import { Printer, Search, Scissors } from 'lucide-react';
 
 // Alto útil de una hoja carta con el margen definido en @page (globals.css:
@@ -46,10 +47,11 @@ export default function ImpresionMasiva() {
       .eq('mes', mes)
       .eq('anio', anio);
 
-    // Ordenamos de menor a mayor por número de factura (numérico, no alfabético,
-    // para que 10266 no quede antes que 9999 como pasaría con orden de texto).
+    // Ordenamos por dirección (Mz A, Mz B, Mz C... y dentro de cada manzana
+    // por número de casa) para que salgan en orden al repartirlas.
     if (data) {
-      data.sort((a, b) => Number(a.numero_factura) - Number(b.numero_factura));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data.sort((a: any, b: any) => compararDirecciones(a.suscriptor?.direccion || '', b.suscriptor?.direccion || ''));
       setFacturas(data);
 
       // Traemos, en una sola consulta, TODAS las facturas Pendiente de los
