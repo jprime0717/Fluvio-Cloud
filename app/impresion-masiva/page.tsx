@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { totalFactura, esHastaPeriodo } from '@/lib/facturas';
+import { totalFactura, cuentaEnDeuda } from '@/lib/facturas';
 import { compararDirecciones } from '@/lib/direccion';
 import { Printer, Search, Scissors } from 'lucide-react';
 
@@ -66,7 +66,7 @@ export default function ImpresionMasiva() {
           .in('suscriptor_id', idsSuscriptores)
           .eq('estado', 'Pendiente');
 
-        (pendientes || []).filter((p) => esHastaPeriodo(p, mes, anio)).forEach((p) => {
+        (pendientes || []).filter((p) => cuentaEnDeuda(p, mes, anio)).forEach((p) => {
           const actual = nuevaDeuda.get(p.suscriptor_id) || { total: 0, cantidad: 0 };
           nuevaDeuda.set(p.suscriptor_id, {
             total: actual.total + totalFactura(p),

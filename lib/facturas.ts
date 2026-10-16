@@ -15,10 +15,17 @@ export function totalFactura(fac: any): number {
   );
 }
 
-// Indica si una factura es del período (mes/año) dado o de uno anterior.
-// Se usa para que la deuda acumulada de una factura solo sume sus saldos
-// anteriores y no meses posteriores que también sigan pendientes.
+// Indica si una factura Pendiente cuenta en la deuda de la factura del período
+// (mes/año) dado: la propia factura de ese período, o un saldo anterior.
+// Como se factura mes vencido (en octubre se cobra septiembre), el mes en
+// curso y el mes anterior nunca son "saldo anterior": solo cuentan los meses
+// previos a ambos (en octubre, agosto hacia atrás).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function esHastaPeriodo(fac: any, mes: number, anio: number): boolean {
-  return Number(fac.anio) < anio || (Number(fac.anio) === anio && Number(fac.mes) <= mes);
+export function cuentaEnDeuda(fac: any, mes: number, anio: number): boolean {
+  if (Number(fac.anio) === anio && Number(fac.mes) === mes) return true;
+  const hoy = new Date();
+  const mesVencido = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  const periodo = Number(fac.anio) * 12 + Number(fac.mes);
+  const limite = Math.min(anio * 12 + mes, mesVencido.getFullYear() * 12 + mesVencido.getMonth() + 1);
+  return periodo < limite;
 }
