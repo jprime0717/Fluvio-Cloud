@@ -38,18 +38,44 @@ export default function Facturacion() {
     `${MES_ACTUAL_HOY}-${ANIO_ACTUAL_HOY}`
   );
 
+  // Mes anterior: los usuarios normales pueden generarlo (o completar las facturas que falten)
+  // por si no se alcanzó a generar durante su mes.
+  const { mes: MES_ANTERIOR, anio: ANIO_ANTERIOR } = generarOpcionesMes(2)[1];
+  const [faltantesMesAnterior, setFaltantesMesAnterior] = useState(0);
+  const [usarMesAnterior, setUsarMesAnterior] = useState(false);
+  const mesAnteriorDisponible = faltantesMesAnterior > 0;
+
+  // Cuenta los suscriptores que aún no tienen factura en el período (0 si hubo error).
+  const contarFaltantes = async (mes: number, anio: number) => {
+    const [{ data: subs, error: errSubs }, { data: facs, error: errFacs }] = await Promise.all([
+      supabase.from('suscriptores').select('id'),
+      supabase.from('facturas').select('suscriptor_id').eq('mes', mes).eq('anio', anio),
+    ]);
+    if (errSubs || errFacs || !subs || !facs) return 0;
+    const conFactura = new Set(facs.map(f => f.suscriptor_id));
+    return subs.filter(s => !conFactura.has(s.id)).length;
+  };
+
   useEffect(() => {
     const verificarRol = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setEsAdminGlobal(esSuperAdmin(session?.user.email));
     };
     verificarRol();
+
+    const verificarMesAnterior = async () => {
+      setFaltantesMesAnterior(await contarFaltantes(MES_ANTERIOR, ANIO_ANTERIOR));
+    };
+    verificarMesAnterior();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Si el usuario pierde el permiso de superadmin (o nunca lo tuvo), forzamos el mes actual.
   const [MES_ACTUAL, ANIO_ACTUAL] = esAdminGlobal
     ? periodoSeleccionado.split('-').map(Number)
-    : [MES_ACTUAL_HOY, ANIO_ACTUAL_HOY];
+    : usarMesAnterior && mesAnteriorDisponible
+      ? [MES_ANTERIOR, ANIO_ANTERIOR]
+      : [MES_ACTUAL_HOY, ANIO_ACTUAL_HOY];
 
   const generarFacturacionMasiva = async () => {
     if (!confirm(`¿Estás seguro de generar la facturación para el mes ${MES_ACTUAL}/${ANIO_ACTUAL}?`)) return;
@@ -113,6 +139,10 @@ export default function Facturacion() {
 
     if (suscriptoresSinFactura.length === 0) {
       setMensaje('¡Todo al día! Todos los suscriptores ya tienen su factura de este mes.');
+      if (MES_ACTUAL === MES_ANTERIOR && ANIO_ACTUAL === ANIO_ANTERIOR) {
+        setFaltantesMesAnterior(0);
+        setUsarMesAnterior(false);
+      }
       setGenerando(false);
       return;
     }
@@ -155,6 +185,11 @@ export default function Facturacion() {
       setMensaje('Error al generar facturas: ' + errFac.message);
     } else {
       setMensaje(`¡Éxito! Se generaron ${insertadas?.length ?? suscriptoresSinFactura.length} facturas calculadas con sus tarifas correspondientes.`);
+      // El mes anterior ya quedó completo: deja de ofrecerse.
+      if (MES_ACTUAL === MES_ANTERIOR && ANIO_ACTUAL === ANIO_ANTERIOR) {
+        setFaltantesMesAnterior(0);
+        setUsarMesAnterior(false);
+      }
     }
 
     setGenerando(false);
@@ -193,9 +228,39 @@ export default function Facturacion() {
             </p>
           </div>
         ) : (
-          <p className="text-gray-600 font-medium mb-8">
-            Mes: <strong className="text-gray-900">{MES_ACTUAL}</strong> | Año: <strong className="text-gray-900">{ANIO_ACTUAL}</strong>
-          </p>
+          <>
+            <p className="text-gray-600 font-medium mb-4">
+              Mes: <strong className="text-gray-900">{MES_ACTUAL}</strong> | Año: <strong className="text-gray-900">{ANIO_ACTUAL}</strong>
+            </p>
+            {mesAnteriorDisponible && (
+              <div className="mb-8 text-left max-w-sm mx-auto bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm font-bold text-amber-900 mb-2">
+                  {NOMBRES_MES[MES_ANTERIOR - 1]} {ANIO_ANTERIOR} tiene {faltantesMesAnterior} {faltantesMesAnterior === 1 ? 'suscriptor' : 'suscriptores'} sin factura. ¿Qué mes quieres generar?
+                </p>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-900 mb-1">
+                  <input
+                    type="radio"
+                    name="periodo-usuario"
+                    checked={!usarMesAnterior}
+                    onChange={() => setUsarMesAnterior(false)}
+                    disabled={generando}
+                  />
+                  Mes actual ({NOMBRES_MES[MES_ACTUAL_HOY - 1]} {ANIO_ACTUAL_HOY})
+                </label>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                  <input
+                    type="radio"
+                    name="periodo-usuario"
+                    checked={usarMesAnterior}
+                    onChange={() => setUsarMesAnterior(true)}
+                    disabled={generando}
+                  />
+                  Mes anterior ({NOMBRES_MES[MES_ANTERIOR - 1]} {ANIO_ANTERIOR})
+                </label>
+              </div>
+            )}
+            {!mesAnteriorDisponible && <div className="mb-4" />}
+          </>
         )}
 
         <div className="bg-blue-50 text-blue-900 p-4 rounded-lg mb-8 text-left text-sm font-medium border border-blue-100">
