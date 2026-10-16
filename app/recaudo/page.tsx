@@ -102,6 +102,25 @@ export default function Recaudo() {
     }
   };
 
+  // 3. Marcar TODAS las facturas pendientes como Pagadas (cuando el cliente
+  // paga el total acumulado que aparece en su factura impresa)
+  const registrarPagoTotal = async () => {
+    const total = facturasPendientes.reduce((acc, f) => acc + totalFactura(f), 0);
+    if (!confirm(`¿Confirmas que recibiste $${total.toLocaleString('es-CO')} y deseas marcar las ${facturasPendientes.length} facturas como PAGADAS?`)) return;
+
+    const { error } = await supabase
+      .from('facturas')
+      .update({ estado: 'Pagado' })
+      .in('id', facturasPendientes.map(f => f.id));
+
+    if (!error) {
+      setFacturasPendientes([]);
+      alert('Pago total registrado con éxito.');
+    } else {
+      alert('Error al registrar el pago: ' + error.message);
+    }
+  };
+
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <h2 className="text-3xl font-bold text-gray-800 mb-8 flex items-center gap-3">
@@ -190,6 +209,20 @@ export default function Recaudo() {
               </div>
             ))}
           </div>
+
+          {facturasPendientes.length > 1 && (
+            <div className="flex justify-between items-center p-6 bg-green-50 border-t">
+              <p className="font-extrabold text-gray-800 text-lg">
+                Total acumulado: <strong className="text-red-600 text-xl">${facturasPendientes.reduce((acc, f) => acc + totalFactura(f), 0).toLocaleString('es-CO')}</strong>
+              </p>
+              <button
+                onClick={registrarPagoTotal}
+                className="bg-green-600 text-white px-5 py-3 rounded-lg shadow flex items-center gap-2 hover:bg-green-700 transition-colors font-bold cursor-pointer"
+              >
+                <CheckCircle size={20} /> Recibir Pago Total
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

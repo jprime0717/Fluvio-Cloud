@@ -14,3 +14,11 @@ export function totalFactura(fac: any): number {
     Number(fac.matricula || 0)
   );
 }
+
+// Indica si una factura es del período (mes/año) dado o de uno anterior.
+// Se usa para que la deuda acumulada de una factura solo sume sus saldos
+// anteriores y no meses posteriores que también sigan pendientes.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function esHastaPeriodo(fac: any, mes: number, anio: number): boolean {
+  return Number(fac.anio) < anio || (Number(fac.anio) === anio && Number(fac.mes) <= mes);
+}

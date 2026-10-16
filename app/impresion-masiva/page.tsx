@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { totalFactura } from '@/lib/facturas';
+import { totalFactura, esHastaPeriodo } from '@/lib/facturas';
 import { compararDirecciones } from '@/lib/direccion';
 import { Printer, Search, Scissors } from 'lucide-react';
 
@@ -17,8 +17,8 @@ export default function ImpresionMasiva() {
   const [facturas, setFacturas] = useState<any[]>([]);
   const [config, setConfig] = useState<any>(null);
   const [buscando, setBuscando] = useState(false);
-  // Deuda acumulada real por suscriptor (suma de TODAS sus facturas en
-  // estado Pendiente, sin importar el mes). Se recalcula en cada búsqueda
+  // Deuda acumulada real por suscriptor (suma de sus facturas en estado
+  // Pendiente hasta el período impreso). Se recalcula en cada búsqueda
   // a partir del estado real de la base de datos, igual que en la vista de
   // una factura individual, así que nunca duplica un cobro: en cuanto una
   // factura vieja se marca Pagada, deja de sumar aquí automáticamente.
@@ -54,19 +54,19 @@ export default function ImpresionMasiva() {
       data.sort((a: any, b: any) => compararDirecciones(a.suscriptor?.direccion || '', b.suscriptor?.direccion || ''));
       setFacturas(data);
 
-      // Traemos, en una sola consulta, TODAS las facturas Pendiente de los
-      // suscriptores de este lote (de cualquier mes/año) para poder sumar
-      // su deuda acumulada real al imprimir.
+      // Traemos, en una sola consulta, las facturas Pendiente de los
+      // suscriptores de este lote hasta el período impreso (los meses
+      // posteriores no son saldo anterior) para sumar su deuda acumulada real.
       const idsSuscriptores = [...new Set(data.map((f) => f.suscriptor_id))];
       const nuevaDeuda = new Map<string, { total: number; cantidad: number }>();
       if (idsSuscriptores.length > 0) {
         const { data: pendientes } = await supabase
           .from('facturas')
-          .select('suscriptor_id, monto, reconexion, interes_mora, multa, matricula')
+          .select('suscriptor_id, mes, anio, monto, reconexion, interes_mora, multa, matricula')
           .in('suscriptor_id', idsSuscriptores)
           .eq('estado', 'Pendiente');
 
-        (pendientes || []).forEach((p) => {
+        (pendientes || []).filter((p) => esHastaPeriodo(p, mes, anio)).forEach((p) => {
           const actual = nuevaDeuda.get(p.suscriptor_id) || { total: 0, cantidad: 0 };
           nuevaDeuda.set(p.suscriptor_id, {
             total: actual.total + totalFactura(p),

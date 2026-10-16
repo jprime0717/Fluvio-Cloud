@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { totalFactura } from '@/lib/facturas';
+import { totalFactura, esHastaPeriodo } from '@/lib/facturas';
 import { Printer, ArrowLeft, Scissors, Pencil, Save, X } from 'lucide-react';
 import Link from 'next/link';
 
@@ -39,12 +39,14 @@ export default function FacturaPDF() {
     if (facturaData) {
       setDatos(facturaData);
 
-      // 3. Magia: Calculamos la mora (Buscamos todas las facturas pendientes de esta persona)
-      const { data: pendientes } = await supabase
+      // 3. Magia: Calculamos la mora (facturas pendientes de esta persona hasta
+      // el período de esta factura; los meses posteriores no son saldo anterior)
+      const { data: todasPendientes } = await supabase
         .from('facturas')
-        .select('monto, reconexion, interes_mora, multa, matricula')
+        .select('mes, anio, monto, reconexion, interes_mora, multa, matricula')
         .eq('suscriptor_id', facturaData.suscriptor.id)
         .eq('estado', 'Pendiente');
+      const pendientes = todasPendientes?.filter(p => esHastaPeriodo(p, facturaData.mes, facturaData.anio));
 
       if (pendientes) {
         setMesesMora(pendientes.length);
