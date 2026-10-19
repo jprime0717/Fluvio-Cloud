@@ -221,7 +221,7 @@ export default function ImpresionMasiva() {
                     <p className="text-base font-bold text-gray-900 truncate">{fac.suscriptor.nombre} {fac.suscriptor.apellido}</p>
                     <p className="text-black font-bold text-xs truncate">NUID: {fac.suscriptor.nuid}</p>
                     {/* DIRECCIÓN RESALTADA: dato clave para quien reparte la factura */}
-                    <p className="mt-1 bg-blue-50 border-2 border-blue-300 rounded px-1.5 py-1 text-black font-black text-xs leading-snug">
+                    <p className="mt-1 bg-blue-50 border-2 border-blue-300 rounded px-1.5 py-1 text-black font-black text-base leading-snug">
                       <span className="text-blue-900 font-black uppercase">Predio: </span>
                       {fac.suscriptor.direccion}
                     </p>

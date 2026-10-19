@@ -344,7 +344,7 @@ export default function FacturaPDF() {
             {/* DIRECCIÓN RESALTADA: es el dato que la persona que reparte/entrega
                 la factura más necesita leer bien, así que va más grande, oscura
                 y con fondo propio para que salte a la vista incluso impresa. */}
-            <p className="mt-2 bg-blue-50 border-2 border-blue-300 rounded px-2 py-1.5 text-black font-black text-base leading-snug">
+            <p className="mt-2 bg-blue-50 border-2 border-blue-300 rounded px-2 py-1.5 text-black font-black text-lg leading-snug">
               <span className="block text-[10px] font-black text-blue-900 uppercase tracking-wider">Dirección</span>
               {datos.suscriptor.direccion}
             </p>
@@ -497,7 +497,7 @@ export default function FacturaPDF() {
               <p className="text-gray-800 text-xs font-bold mt-1">NUID: {datos.suscriptor.nuid || 'N/A'} | Medidor: {datos.suscriptor.numero_medidor || 'N/A'}</p>
 
               {/* DIRECCIÓN RESALTADA también en el desprendible */}
-              <p className="text-gray-900 text-xs font-bold mt-1">Dirección: {datos.suscriptor.direccion}</p>
+              <p className="text-gray-900 text-lg font-extrabold mt-1">Dirección: {datos.suscriptor.direccion}</p>
 
               {/* NUEVO: Tipo en el desprendible */}
               <p className="text-xs font-bold text-blue-700 mt-1 uppercase">{datos.suscriptor.tipo_suscriptor || 'Residencial'}</p>
