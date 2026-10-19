@@ -56,7 +56,7 @@ export default function Sidebar() {
   if (pathname === '/login') return null;
 
   // Pantalla de carga (oculta en móvil para no romper diseño, visible en PC)
-  if (cargando) return <aside className="hidden md:block w-64 bg-blue-900 min-h-screen print:hidden"></aside>;
+  if (cargando) return <aside className="hidden md:block w-64 bg-blue-900 min-h-screen"></aside>;
 
   const esAdminGlobal = esSuperAdmin(usuario?.email);
   const rolVisual = esAdminGlobal ? 'Superadmin' : 'Administrador';
@@ -64,7 +64,7 @@ export default function Sidebar() {
   return (
     <>
       {/* --- BARRA SUPERIOR PARA CELULARES --- */}
-      <div className="md:hidden print:hidden bg-blue-900 text-white flex items-center justify-between p-4 sticky top-0 z-20 shadow-md">
+      <div className="md:hidden bg-blue-900 text-white flex items-center justify-between p-4 sticky top-0 z-20 shadow-md">
         <span className="font-bold text-xl">Fluvio-Cloud</span>
         <button 
           onClick={() => setIsOpen(true)} 
@@ -77,7 +77,7 @@ export default function Sidebar() {
       {/* --- FONDO OSCURO PARA CELULARES (Cierra el menú al tocar afuera) --- */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm print:hidden"
+          className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -85,7 +85,7 @@ export default function Sidebar() {
       {/* --- MENÚ LATERAL PRINCIPAL --- */}
       {/* La magia responsive: fixed en móvil (fuera de pantalla), static en PC */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-40 w-72 bg-blue-900 text-white p-6 min-h-screen flex flex-col transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:w-64 overflow-y-auto shadow-2xl md:shadow-none print:hidden ${
+        className={`fixed inset-y-0 left-0 z-40 w-72 bg-blue-900 text-white p-6 min-h-screen flex flex-col transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:w-64 overflow-y-auto shadow-2xl md:shadow-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

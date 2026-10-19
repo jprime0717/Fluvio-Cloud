@@ -38,50 +38,11 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Todas las facturas se imprimen en hoja media carta (8.5in x 5.5in, es decir
-   21.6cm x 14cm en horizontal), una factura por hoja. Al declarar el tamaño
-   aquí, Chrome preselecciona ese papel en el diálogo de impresión. Margen 0
-   porque el margen lo pone cada .hoja-media-carta por dentro; además así el
-   navegador no tiene espacio para imprimir la URL/fecha en los bordes. */
+/* Impresión Masiva agrupa 2 facturas por hoja carta; la factura individual
+   sigue usando 1 hoja. Margen chico para maximizar el espacio útil. */
 @page {
-  size: 8.5in 5.5in;
-  margin: 0;
-}
-
-/* Vista previa en pantalla: cada hoja se ve del tamaño real del papel.
-   En celulares se puede desplazar horizontalmente. */
-.hoja-media-carta-scroll {
-  overflow-x: auto;
-  max-width: 100%;
-}
-.hoja-media-carta {
-  box-sizing: border-box;
-  width: 8.5in;
-  height: 139mm;
-  margin: 0 auto;
-  overflow: hidden;
-  background: #fff;
-  box-shadow: 0 10px 25px rgb(0 0 0 / 0.15);
-}
-
-@media print {
-  html,
-  body {
-    margin: 0;
-    padding: 0;
-    background: #fff;
-  }
-  .hoja-media-carta-scroll {
-    overflow: visible;
-  }
-  .hoja-media-carta {
-    margin: 0;
-    box-shadow: none;
-    break-inside: avoid;
-  }
-  .hoja-media-carta-scroll + .hoja-media-carta-scroll {
-    break-before: page;
-  }
+  size: letter portrait;
+  margin: 10mm;
 }
 
 /* En papel (sobre todo impresoras en blanco y negro, o con "gráficos de
