@@ -4,14 +4,22 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { totalFactura } from '@/lib/facturas';
 import { compararDirecciones } from '@/lib/direccion';
+import { esSuperAdmin } from '@/lib/auth';
 import Link from 'next/link';
-import { Eye, FileText } from 'lucide-react';
+import { Eye, FileText, Undo2 } from 'lucide-react';
 
 export default function ListaFacturas() {
   const [facturas, setFacturas] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [esAdminGlobal, setEsAdminGlobal] = useState(false);
 
   useEffect(() => {
+    const verificarRol = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setEsAdminGlobal(esSuperAdmin(session?.user.email));
+    };
+    verificarRol();
+
     const cargarFacturas = async () => {
       // Traemos las facturas y cruzamos los datos para saber el nombre y cédula del suscriptor
       const { data } = await supabase
@@ -36,6 +44,24 @@ export default function ListaFacturas() {
 
     cargarFacturas();
   }, []);
+
+  // Deshace un pago registrado por error en Recaudo: la factura vuelve a
+  // Pendiente con todos sus datos, sin tener que borrarla y regenerarla.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const anularPago = async (fac: any) => {
+    if (!confirm(`¿Anular el pago de la factura ${fac.numero_factura} (${fac.mes}/${fac.anio}) de ${fac.suscriptor?.nombre} ${fac.suscriptor?.apellido}? Volverá a quedar Pendiente.`)) return;
+
+    const { error } = await supabase
+      .from('facturas')
+      .update({ estado: 'Pendiente' })
+      .eq('id', fac.id);
+
+    if (error) {
+      alert('Error al anular el pago: ' + error.message);
+      return;
+    }
+    setFacturas(facturas.map(f => f.id === fac.id ? { ...f, estado: 'Pendiente' } : f));
+  };
 
   return (
     <div className="p-8">
@@ -82,6 +108,14 @@ export default function ListaFacturas() {
                     >
                       <Eye size={16} /> Ver PDF
                     </Link>
+                    {esAdminGlobal && fac.estado === 'Pagado' && (
+                      <button
+                        onClick={() => anularPago(fac)}
+                        className="ml-2 inline-flex items-center gap-1 text-red-600 hover:text-red-800 hover:underline bg-red-50 px-3 py-1 rounded cursor-pointer"
+                      >
+                        <Undo2 size={16} /> Anular pago
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
