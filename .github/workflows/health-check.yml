@@ -1,0 +1,29 @@
+name: Health check
+
+# Respaldo del cron de Vercel: consulta a diario el endpoint de salud de
+# producción. Mantiene activa la base de Supabase y, si algo falla, el job
+# queda en rojo y GitHub notifica por correo al dueño del repositorio.
+#
+# Nota: GitHub desactiva los workflows programados tras 60 días sin commits
+# en el repositorio; se reactivan desde la pestaña Actions.
+
+on:
+  schedule:
+    - cron: '17 11 * * *' # 06:17 hora Colombia
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  APP_URL: https://fluvio-cloud.vercel.app
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: La aplicación responde
+        run: curl --fail --silent --show-error --retry 3 --retry-delay 20 --max-time 30 --output /dev/null "$APP_URL/"
+
+      - name: La base de datos responde
+        run: curl --fail --silent --show-error --retry 3 --retry-delay 20 --retry-all-errors --max-time 30 "$APP_URL/api/health"
